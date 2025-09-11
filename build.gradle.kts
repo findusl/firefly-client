@@ -8,3 +8,14 @@ plugins {
 	alias(libs.plugins.kotlinMultiplatform) apply false
 	alias(libs.plugins.ktlint)
 }
+
+allprojects {
+	apply(plugin = rootProject.libs.plugins.ktlint.get().pluginId)
+
+	ktlint {
+		filter {
+			exclude("**/generated/**")
+			exclude("**/BuildKonfig.kt")
+		}
+	}
+}
