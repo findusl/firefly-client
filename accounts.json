@@ -1,0 +1,77 @@
+{
+  "data": [
+    {
+      "type": "accounts",
+      "id": "1",
+      "attributes": {
+        "created_at": "2025-09-10T22:14:20+02:00",
+        "updated_at": "2025-09-10T22:14:20+02:00",
+        "active": true,
+        "order": 1,
+        "name": "Main account",
+        "type": "asset",
+        "account_role": "defaultAsset",
+        "object_group_id": null,
+        "object_group_order": null,
+        "object_group_title": null,
+        "object_has_currency_setting": true,
+        "currency_id": "1",
+        "currency_name": "Euro",
+        "currency_code": "EUR",
+        "currency_symbol": "\u20ac",
+        "currency_decimal_places": 2,
+        "primary_currency_id": "1",
+        "primary_currency_name": "Euro",
+        "primary_currency_code": "EUR",
+        "primary_currency_symbol": "\u20ac",
+        "primary_currency_decimal_places": 2,
+        "current_balance": "0",
+        "pc_current_balance": null,
+        "opening_balance": null,
+        "pc_opening_balance": null,
+        "virtual_balance": "0",
+        "pc_virtual_balance": null,
+        "debt_amount": null,
+        "pc_debt_amount": null,
+        "current_balance_date": "2025-09-11T23:59:59+02:00",
+        "notes": null,
+        "monthly_payment_date": null,
+        "credit_card_type": null,
+        "account_number": null,
+        "iban": null,
+        "bic": null,
+        "opening_balance_date": null,
+        "liability_type": null,
+        "liability_direction": null,
+        "interest": null,
+        "interest_period": null,
+        "include_net_worth": true,
+        "longitude": null,
+        "latitude": null,
+        "zoom_level": null,
+        "last_activity": null
+      },
+      "links": {
+        "self": "<BASE_URL>/api/v1/accounts/1",
+        "0": {
+          "rel": "self",
+          "uri": "/accounts/1"
+        }
+      }
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "total": 1,
+      "count": 1,
+      "per_page": 50,
+      "current_page": 1,
+      "total_pages": 1
+    }
+  },
+  "links": {
+    "self": "<BASE_URL>/api/v1/accounts?limit=50&type=all&page=1",
+    "first": "<BASE_URL>/api/v1/accounts?limit=50&type=all&page=1",
+    "last": "<BASE_URL>/api/v1/accounts?limit=50&type=all&page=1"
+  }
+}
