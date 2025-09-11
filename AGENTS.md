@@ -32,6 +32,10 @@ use `python openapi_helper.py /v1/accounts --request` to fetch the same data.
   - `kotlinx.serialization` for structured I/O.
 - Use the Ktor HTTP client for calling the Firefly API. Select the engine per platform (e.g. CIO for JVM/Android, Darwin for iOS, JS/Wasm for browser or WebAssembly) so a single client can support all targets.
 
+## Code formatting
+- Kotlin files use tabs for indentation; see `.editorconfig` for all style rules.
+- Run `./gradlew ktlintFormat` before committing to apply the project-specific Kotlin style.
+
 ## Testing
 - Add tests for new features whenever possible.
 - Use `kotlin.test` for unit tests in shared code.
