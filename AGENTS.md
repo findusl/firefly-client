@@ -23,3 +23,17 @@ curl -X GET --location "$BASE_URL/api/v1/accounts" \
 
 The above command writes the list of accounts to `accounts.json`. You can also
 use `python openapi_helper.py /v1/accounts --request` to fetch the same data.
+
+## Kotlin Multiplatform development
+- Share business logic in `commonMain` so Android, iOS, and future targets like WebAssembly reuse the same code.
+- Prefer multiplatform libraries:
+  - `kotlinx.datetime` for dates and times.
+  - `kotlinx.io` (built on Okio) or other multiplatform file-access libraries for filesystem interactions.
+  - `kotlinx.serialization` for structured I/O.
+- Use the Ktor HTTP client for calling the Firefly API. Select the engine per platform (e.g. CIO for JVM/Android, Darwin for iOS, JS/Wasm for browser or WebAssembly) so a single client can support all targets.
+
+## Testing
+- Add tests for new features whenever possible.
+- Use `kotlin.test` for unit tests in shared code.
+- Use the Compose UI Test toolkit for UI testing.
+- Use `kotlinx.coroutines.test` (e.g. `runTest`) for coroutine-based code.
