@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
@@ -25,7 +26,9 @@ fun App() {
 		var accounts by remember { mutableStateOf<List<Account>>(emptyList()) }
 		val client = remember {
 			HttpClient {
-				install(ContentNegotiation) { json() }
+				install(ContentNegotiation) {
+					json(Json { ignoreUnknownKeys = true })
+				}
 			}
 		}
 		LaunchedEffect(Unit) {
