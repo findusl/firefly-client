@@ -1,3 +1,4 @@
+import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -5,6 +6,8 @@ plugins {
 	alias(libs.plugins.androidApplication)
 	alias(libs.plugins.composeMultiplatform)
 	alias(libs.plugins.composeCompiler)
+	alias(libs.plugins.serialization)
+	alias(libs.plugins.buildKonfig)
 }
 
 kotlin {
@@ -28,6 +31,7 @@ kotlin {
 		androidMain.dependencies {
 			implementation(compose.preview)
 			implementation(libs.androidx.activity.compose)
+			implementation(libs.ktor.client.cio)
 		}
 		commonMain.dependencies {
 			implementation(compose.runtime)
@@ -38,10 +42,30 @@ kotlin {
 			implementation(compose.components.uiToolingPreview)
 			implementation(libs.androidx.lifecycle.viewmodelCompose)
 			implementation(libs.androidx.lifecycle.runtimeCompose)
+			implementation(libs.ktor.client.core)
+			implementation(libs.ktor.client.contentNegotiation)
+			implementation(libs.ktor.serialization.kotlinxJson)
+		}
+		iosArm64Main.dependencies {
+			implementation(libs.ktor.client.darwin)
+		}
+		iosSimulatorArm64Main.dependencies {
+			implementation(libs.ktor.client.darwin)
 		}
 		commonTest.dependencies {
 			implementation(libs.kotlin.test)
 		}
+	}
+}
+
+buildkonfig {
+	packageName = "de.lehrbaum.firefly"
+
+	defaultConfigs {
+		val baseUrl = System.getenv("BASE_URL") ?: ""
+		val accessToken = System.getenv("ACCESS_TOKEN") ?: ""
+		buildConfigField(STRING, "BASE_URL", baseUrl)
+		buildConfigField(STRING, "ACCESS_TOKEN", accessToken)
 	}
 }
 
