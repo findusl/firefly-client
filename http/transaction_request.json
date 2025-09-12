@@ -1,0 +1,12 @@
+{
+  "transactions": [
+    {
+      "type": "withdrawal",
+      "date": "2024-01-01T00:00:00Z",
+      "amount": "1.23",
+      "description": "Demo transaction",
+      "source_id": "1",
+      "destination_name": "Some Target"
+    }
+  ]
+}
