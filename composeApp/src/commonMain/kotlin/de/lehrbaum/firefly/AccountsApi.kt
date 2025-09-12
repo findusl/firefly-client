@@ -12,6 +12,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AccountAttributes(
 	val name: String,
+	val type: String,
 )
 
 @Serializable
@@ -29,6 +30,7 @@ data class AccountsResponse(
 data class Account(
 	val id: String,
 	val name: String,
+	val type: String,
 )
 
 suspend fun fetchAccounts(client: HttpClient): List<Account> {
@@ -37,5 +39,5 @@ suspend fun fetchAccounts(client: HttpClient): List<Account> {
 			header(HttpHeaders.Authorization, "Bearer ${BuildKonfig.ACCESS_TOKEN}")
 			accept(ContentType.Application.Json)
 		}.body()
-	return response.data.map { Account(it.id, it.attributes.name) }
+	return response.data.map { Account(it.id, it.attributes.name, it.attributes.type) }
 }
