@@ -5,7 +5,10 @@ import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respondOk
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.test.runTest
 
 class MainViewModelTest {
 	@Test
@@ -25,4 +28,21 @@ class MainViewModelTest {
 		assertNull(viewModel.selectedSource)
 		assertNull(viewModel.selectedTarget)
 	}
+
+	@Test
+	fun loadAccounts_setsErrorMessage_onFailure() =
+		runTest {
+			val client = HttpClient(MockEngine { throw RuntimeException("network") })
+			val viewModel = MainViewModel(client)
+			viewModel.loadAccounts()
+			assertEquals("Failed to reach server", viewModel.errorMessage)
+		}
+
+	@Test
+	fun loadAccounts_propagatesCancellation() =
+		runTest {
+			val client = HttpClient(MockEngine { throw CancellationException("cancel") })
+			val viewModel = MainViewModel(client)
+			assertFailsWith<CancellationException> { viewModel.loadAccounts() }
+		}
 }
