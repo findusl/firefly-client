@@ -61,7 +61,14 @@ def _censor(value: Union[str, bytes], base_url: str, token: str) -> Union[str, b
     return value
 
 
-def fetch_endpoint(spec, path, method="get", accept_override=None, content_override=None):
+def fetch_endpoint(
+    spec,
+    path,
+    method="get",
+    accept_override=None,
+    content_override=None,
+    data=None,
+):
     base_url = os.environ.get("BASE_URL")
     token = os.environ.get("ACCESS_TOKEN")
     if not base_url or not token:
@@ -96,7 +103,7 @@ def fetch_endpoint(spec, path, method="get", accept_override=None, content_overr
     if content_type and method.lower() in {"post", "put", "patch"}:
         headers["Content-Type"] = content_type
 
-    response = requests.request(method.upper(), url, headers=headers)
+    response = requests.request(method.upper(), url, headers=headers, data=data)
     response.raise_for_status()
     return response
 
@@ -108,6 +115,10 @@ def main(argv):
     parser.add_argument("--method", default="get", help="HTTP method for --request")
     parser.add_argument("--accept", help="Override Accept header")
     parser.add_argument("--content-type", help="Override Content-Type header")
+    parser.add_argument(
+        "--data",
+        help="Request body to send. Prefix with @ to read from file",
+    )
     args = parser.parse_args(argv)
 
     spec = load_spec()
@@ -115,12 +126,20 @@ def main(argv):
     if args.path is None:
         list_endpoints(spec)
     elif args.request:
+        body = None
+        if args.data:
+            body = (
+                open(args.data[1:], "rb").read()
+                if args.data.startswith("@")
+                else args.data
+            )
         resp = fetch_endpoint(
             spec,
             args.path,
             method=args.method,
             accept_override=args.accept,
             content_override=args.content_type,
+            data=body,
         )
         ctype = resp.headers.get("Content-Type", "")
         base_url = os.environ.get("BASE_URL", "")

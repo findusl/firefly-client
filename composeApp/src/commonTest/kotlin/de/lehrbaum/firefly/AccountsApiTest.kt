@@ -28,7 +28,7 @@ class AccountsApiTest {
 				}
 			}
 			val accounts = fetchAccounts(client)
-			assertEquals(listOf(Account("1", "Main account")), accounts)
+			assertEquals(listOf(Account("1", "Main account", "asset")), accounts)
 		}
 }
 
@@ -38,9 +38,10 @@ private const val ACCOUNTS_JSON = """{
 			"type": "accounts",
 			"id": "1",
 			"attributes": {
-				"name": "Main account"
-			}
-		}
-	]
+                                "name": "Main account",
+                                "type": "asset"
+                        }
+                }
+        ]
 }
 """
