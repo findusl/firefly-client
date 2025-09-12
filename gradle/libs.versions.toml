@@ -13,9 +13,9 @@ composeMultiplatform = "1.8.2"
 junit = "4.13.2"
 kotlin = "2.2.20"
 ktlint = "13.1.0"
-ktor = "2.3.10"
-kotlinx-coroutines = "1.9.0"
-kotlinx-datetime = "0.6.1"
+ktor = "3.3.0"
+kotlinx-coroutines = "1.10.2"
+kotlinx-datetime = "0.7.1-0.6.x-compat"
 
 
 [libraries]
@@ -46,4 +46,4 @@ composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "k
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-buildKonfig = { id = "com.codingfeline.buildkonfig", version = "0.15.1" }
+buildKonfig = { id = "com.codingfeline.buildkonfig", version = "0.17.1" }
