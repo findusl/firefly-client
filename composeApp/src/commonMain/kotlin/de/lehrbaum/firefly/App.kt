@@ -50,6 +50,16 @@ fun App() {
 				.fillMaxSize()
 				.padding(16.dp),
 		) {
+			if (viewModel.errorMessage != null) {
+				Text(
+					viewModel.errorMessage!!,
+					modifier = Modifier
+						.fillMaxWidth()
+						.background(MaterialTheme.colorScheme.errorContainer)
+						.padding(8.dp),
+					color = MaterialTheme.colorScheme.onErrorContainer,
+				)
+			}
 			ExposedDropdownMenuBox(
 				expanded = viewModel.expandedSource,
 				onExpandedChange = { viewModel.expandedSource = !viewModel.expandedSource },

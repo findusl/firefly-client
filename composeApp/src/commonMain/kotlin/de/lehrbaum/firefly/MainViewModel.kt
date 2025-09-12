@@ -16,9 +16,15 @@ class MainViewModel(private val client: HttpClient) {
 	var expandedTarget by mutableStateOf(false)
 	var selectedSource by mutableStateOf<Account?>(null)
 	var selectedTarget by mutableStateOf<Account?>(null)
+	var errorMessage by mutableStateOf<String?>(null)
 
 	suspend fun loadAccounts() {
-		accounts = fetchAccounts(client)
+		try {
+			accounts = fetchAccounts(client)
+			errorMessage = null
+		} catch (t: Throwable) {
+			errorMessage = "Failed to reach server"
+		}
 	}
 
 	fun onSourceTextChange(text: String) {
@@ -36,8 +42,17 @@ class MainViewModel(private val client: HttpClient) {
 	suspend fun save() {
 		val src = selectedSource
 		if (src != null && amount.isNotBlank() && description.isNotBlank()) {
-			createTransaction(client, src, targetText, selectedTarget, description, amount)
+			try {
+				createTransaction(client, src, targetText, selectedTarget, description, amount)
+				errorMessage = null
+			} catch (t: Throwable) {
+				errorMessage = "Failed to reach server"
+			}
 		}
+	}
+
+	fun clearError() {
+		errorMessage = null
 	}
 
 	fun clear() {
