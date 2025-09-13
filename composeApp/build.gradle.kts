@@ -66,8 +66,8 @@ buildkonfig {
 	packageName = "de.lehrbaum.firefly"
 
 	defaultConfigs {
-		val baseUrl = System.getenv("BASE_URL") ?: project.findProperty("firefly.base-url")?.toString() ?: throw IllegalStateException("No baseUrl provided")
-		val accessToken = System.getenv("ACCESS_TOKEN") ?: project.findProperty("firefly.access-token")?.toString() ?: throw IllegalStateException("No accessToken provided")
+		val baseUrl = System.getenv("BASE_URL") ?: project.findProperty("firefly.base-url")?.toString() ?: ""
+		val accessToken = System.getenv("ACCESS_TOKEN") ?: project.findProperty("firefly.access-token")?.toString() ?: ""
 		buildConfigField(STRING, "BASE_URL", baseUrl)
 		buildConfigField(STRING, "ACCESS_TOKEN", accessToken)
 	}
