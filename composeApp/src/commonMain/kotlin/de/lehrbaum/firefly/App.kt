@@ -72,7 +72,11 @@ fun App() {
 					label = { Text("Source account") },
 				)
 				val suggestions =
-					viewModel.accounts.filter { it.name.contains(viewModel.sourceText, true) && it.type == "asset" }
+					viewModel.accounts
+						.filter {
+							it.name.contains(viewModel.sourceText, true) &&
+								(it.type == "asset" || it.type == "cash")
+						}.sortedWith(compareBy({ it.type != "cash" }, { it.name.lowercase() }))
 				DropdownMenu(
 					expanded = viewModel.expandedSource,
 					onDismissRequest = { viewModel.expandedSource = false },
