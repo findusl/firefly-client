@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CancellationException
 
 class MainViewModel(private val client: HttpClient) {
 	var accounts by mutableStateOf<List<Account>>(emptyList())
@@ -16,9 +17,12 @@ class MainViewModel(private val client: HttpClient) {
 	var expandedTarget by mutableStateOf(false)
 	var selectedSource by mutableStateOf<Account?>(null)
 	var selectedTarget by mutableStateOf<Account?>(null)
+	var errorMessage by mutableStateOf<String?>(null)
 
 	suspend fun loadAccounts() {
-		accounts = fetchAccounts(client)
+		runNetworkCall {
+			accounts = fetchAccounts(client)
+		}
 	}
 
 	fun onSourceTextChange(text: String) {
@@ -36,8 +40,29 @@ class MainViewModel(private val client: HttpClient) {
 	suspend fun save() {
 		val src = selectedSource
 		if (src != null && amount.isNotBlank() && description.isNotBlank()) {
-			createTransaction(client, src, targetText, selectedTarget, description, amount)
+			runNetworkCall {
+				createTransaction(
+					client,
+					src,
+					targetText,
+					selectedTarget,
+					description,
+					amount,
+				)
+			}
 		}
+	}
+
+	private inline fun <T> runNetworkCall(block: () -> T): Result<T> =
+		runCatching(block)
+			.onFailure {
+				if (it is CancellationException) throw it else errorMessage = "Failed to reach server"
+			}.onSuccess {
+				errorMessage = null
+			}
+
+	fun clearError() {
+		errorMessage = null
 	}
 
 	fun clear() {
