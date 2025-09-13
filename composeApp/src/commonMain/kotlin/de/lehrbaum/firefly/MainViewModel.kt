@@ -3,6 +3,7 @@ package de.lehrbaum.firefly
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CancellationException
 
@@ -56,8 +57,14 @@ class MainViewModel(private val client: HttpClient) {
 	private inline fun <T> runNetworkCall(block: () -> T): Result<T> =
 		runCatching(block)
 			.onFailure {
-				if (it is CancellationException) throw it else errorMessage = "Failed to reach server"
+				if (it is CancellationException) {
+					throw it
+				} else {
+					Napier.e("Network call failed", it)
+					errorMessage = "Failed to reach server"
+				}
 			}.onSuccess {
+				Napier.d("Network call succeeded")
 				errorMessage = null
 			}
 
