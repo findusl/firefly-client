@@ -1,5 +1,6 @@
 package de.lehrbaum.firefly
 
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.accept
@@ -34,10 +35,12 @@ data class Account(
 )
 
 suspend fun fetchAccounts(client: HttpClient): List<Account> {
+	Napier.i("Fetching accounts")
 	val response: AccountsResponse = client
 		.get("${BuildKonfig.BASE_URL}/api/v1/accounts") {
 			header(HttpHeaders.Authorization, "Bearer ${BuildKonfig.ACCESS_TOKEN}")
 			accept(ContentType.Application.Json)
 		}.body()
+	Napier.d("Fetched ${response.data.size} accounts")
 	return response.data.map { Account(it.id, it.attributes.name, it.attributes.type) }
 }

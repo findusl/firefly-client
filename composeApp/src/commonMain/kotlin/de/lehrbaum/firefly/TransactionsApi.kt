@@ -1,5 +1,6 @@
 package de.lehrbaum.firefly
 
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.request.accept
 import io.ktor.client.request.header
@@ -36,6 +37,7 @@ suspend fun createTransaction(
 	description: String,
 	amount: String,
 ) {
+	Napier.i("Creating transaction $description $amount from ${source.name} to ${target?.name ?: targetText}")
 	val now: Instant = Clock.System.now()
 	val type = when {
 		target != null && target.type == "asset" -> "transfer"
@@ -56,4 +58,5 @@ suspend fun createTransaction(
 		accept(ContentType.parse("application/vnd.api+json"))
 		setBody(TransactionRequest(listOf(split)))
 	}
+	Napier.d("Transaction created")
 }
