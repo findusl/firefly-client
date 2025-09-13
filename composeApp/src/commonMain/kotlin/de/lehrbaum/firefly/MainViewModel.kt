@@ -5,8 +5,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 import kotlinx.coroutines.CancellationException
 
+@OptIn(ExperimentalTime::class)
 class MainViewModel(private val client: HttpClient) {
 	var accounts by mutableStateOf<List<Account>>(emptyList())
 		private set
@@ -19,6 +23,7 @@ class MainViewModel(private val client: HttpClient) {
 	var selectedSource by mutableStateOf<Account?>(null)
 	var selectedTarget by mutableStateOf<Account?>(null)
 	var errorMessage by mutableStateOf<String?>(null)
+	var dateTime by mutableStateOf(Clock.System.now())
 
 	suspend fun loadAccounts() {
 		runNetworkCall {
@@ -49,6 +54,7 @@ class MainViewModel(private val client: HttpClient) {
 					selectedTarget,
 					description,
 					amount,
+					dateTime,
 				)
 			}
 		}
@@ -79,5 +85,10 @@ class MainViewModel(private val client: HttpClient) {
 		amount = ""
 		selectedSource = null
 		selectedTarget = null
+		dateTime = Clock.System.now()
+	}
+
+	fun onDateTimeChange(newDateTime: Instant) {
+		dateTime = newDateTime
 	}
 }

@@ -8,7 +8,6 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.serialization.SerialName
@@ -38,9 +37,9 @@ suspend fun createTransaction(
 	target: Account?,
 	description: String,
 	amount: String,
+	dateTime: Instant,
 ) {
 	Napier.i("Creating transaction $description $amount from ${source.name} to ${target?.name ?: targetText}")
-	val now: Instant = Clock.System.now()
 	val type = when {
 		target != null && target.type == "asset" -> "transfer"
 		target != null && target.type == "revenue" -> "deposit"
@@ -48,7 +47,7 @@ suspend fun createTransaction(
 	}
 	val split = TransactionSplitRequest(
 		type = type,
-		date = now.toString(),
+		date = dateTime.toString(),
 		amount = amount,
 		description = description,
 		sourceId = source.id,
