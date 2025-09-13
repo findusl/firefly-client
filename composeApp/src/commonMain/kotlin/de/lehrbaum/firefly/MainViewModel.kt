@@ -20,12 +20,8 @@ class MainViewModel(private val client: HttpClient) {
 	var errorMessage by mutableStateOf<String?>(null)
 
 	suspend fun loadAccounts() {
-		runCatchingWithCancellation {
+		runNetworkCall {
 			accounts = fetchAccounts(client)
-		}.onSuccess {
-			errorMessage = null
-		}.onFailure {
-			errorMessage = "Failed to reach server"
 		}
 	}
 
@@ -44,7 +40,7 @@ class MainViewModel(private val client: HttpClient) {
 	suspend fun save() {
 		val src = selectedSource
 		if (src != null && amount.isNotBlank() && description.isNotBlank()) {
-			runCatchingWithCancellation {
+			runNetworkCall {
 				createTransaction(
 					client,
 					src,
@@ -53,18 +49,17 @@ class MainViewModel(private val client: HttpClient) {
 					description,
 					amount,
 				)
-			}.onSuccess {
-				errorMessage = null
-			}.onFailure {
-				errorMessage = "Failed to reach server"
 			}
 		}
 	}
 
-	private inline fun <T> runCatchingWithCancellation(block: () -> T): Result<T> =
-		runCatching(block).onFailure {
-			if (it is CancellationException) throw it
-		}
+	private inline fun <T> runNetworkCall(block: () -> T): Result<T> =
+		runCatching(block)
+			.onFailure {
+				if (it is CancellationException) throw it else errorMessage = "Failed to reach server"
+			}.onSuccess {
+				errorMessage = null
+			}
 
 	fun clearError() {
 		errorMessage = null
