@@ -16,6 +16,7 @@ ktlint = "13.1.0"
 ktor = "3.3.0"
 kotlinx-coroutines = "1.10.2"
 kotlinx-datetime = "0.7.1-0.6.x-compat"
+napier = "2.7.1"
 
 
 [libraries]
@@ -37,6 +38,7 @@ ktor-serialization-kotlinxJson = { module = "io.ktor:ktor-serialization-kotlinx-
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+napier = { module = "io.github.aakira:napier", version.ref = "napier" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
