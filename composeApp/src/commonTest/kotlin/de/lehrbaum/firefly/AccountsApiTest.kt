@@ -14,7 +14,7 @@ import kotlinx.serialization.json.Json
 
 class AccountsApiTest {
 	@Test
-	fun fetchAccounts_parsesIdAndName() =
+	fun fetchAccounts_filtersInitialBalanceAccounts() =
 		runTest {
 			val engine = MockEngine { _ ->
 				respond(
@@ -32,16 +32,26 @@ class AccountsApiTest {
 		}
 }
 
-private const val ACCOUNTS_JSON = """{
-	"data": [
-		{
-			"type": "accounts",
-			"id": "1",
-			"attributes": {
-                                "name": "Main account",
-                                "type": "asset"
-                        }
-                }
-        ]
+private val ACCOUNTS_JSON =
+	"""
+{
+  "data": [
+    {
+      "type": "accounts",
+      "id": "1",
+      "attributes": {
+        "name": "Main account",
+        "type": "asset"
+      }
+    },
+    {
+      "type": "accounts",
+      "id": "2",
+      "attributes": {
+        "name": "Initial balance for \"Main account\"",
+        "type": "initial-balance"
+      }
+    }
+  ]
 }
-"""
+	""".trimIndent()

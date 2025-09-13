@@ -39,5 +39,7 @@ suspend fun fetchAccounts(client: HttpClient): List<Account> {
 			header(HttpHeaders.Authorization, "Bearer ${BuildKonfig.ACCESS_TOKEN}")
 			accept(ContentType.Application.Json)
 		}.body()
-	return response.data.map { Account(it.id, it.attributes.name, it.attributes.type) }
+	return response.data
+		.filterNot { it.attributes.type == "initial-balance" }
+		.map { Account(it.id, it.attributes.name, it.attributes.type) }
 }
