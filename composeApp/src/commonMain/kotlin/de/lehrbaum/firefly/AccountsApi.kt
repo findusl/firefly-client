@@ -42,5 +42,7 @@ suspend fun fetchAccounts(client: HttpClient): List<Account> {
 			accept(ContentType.Application.Json)
 		}.body()
 	Napier.d("Fetched ${response.data.size} accounts")
-	return response.data.map { Account(it.id, it.attributes.name, it.attributes.type) }
+	return response.data
+		.filterNot { it.attributes.type == "initial-balance" }
+		.map { Account(it.id, it.attributes.name, it.attributes.type) }
 }
