@@ -9,7 +9,6 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.serialization.SerialName
@@ -32,6 +31,7 @@ private data class TransactionRequest(
 )
 
 @OptIn(ExperimentalTime::class)
+// date must be provided by caller
 suspend fun createTransaction(
 	client: HttpClient,
 	source: Account,
@@ -39,9 +39,9 @@ suspend fun createTransaction(
 	target: Account?,
 	description: String,
 	amount: String,
+	date: Instant,
 ) {
 	Napier.i("Creating transaction $description $amount from ${source.name} to ${target?.name ?: targetText}")
-	val now: Instant = Clock.System.now()
 	val type = when {
 		target != null && target.type == "asset" -> "transfer"
 		target != null && target.type == "revenue" -> "deposit"
@@ -49,7 +49,7 @@ suspend fun createTransaction(
 	}
 	val split = TransactionSplitRequest(
 		type = type,
-		date = now.toString(),
+		date = date.toString(),
 		amount = amount,
 		description = description,
 		sourceId = source.id,

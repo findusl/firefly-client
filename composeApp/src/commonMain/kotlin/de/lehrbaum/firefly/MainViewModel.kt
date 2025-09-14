@@ -5,7 +5,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.CancellationException
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 
 class MainViewModel(private val client: HttpClient) {
 	var accounts by mutableStateOf<List<Account>>(emptyList())
@@ -19,6 +25,12 @@ class MainViewModel(private val client: HttpClient) {
 	var selectedSource by mutableStateOf<Account?>(null)
 	var selectedTarget by mutableStateOf<Account?>(null)
 	var errorMessage by mutableStateOf<String?>(null)
+
+	@OptIn(ExperimentalTime::class)
+	var dateTime by mutableStateOf(
+		Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()),
+	)
+		private set
 
 	suspend fun loadAccounts() {
 		runNetworkCall {
@@ -38,6 +50,11 @@ class MainViewModel(private val client: HttpClient) {
 		selectedTarget = accounts.firstOrNull { it.name == text }
 	}
 
+	fun onDateTimeChange(newDateTime: LocalDateTime) {
+		dateTime = newDateTime
+	}
+
+	@OptIn(ExperimentalTime::class)
 	suspend fun save() {
 		val src = selectedSource
 		if (src != null && amount.isNotBlank() && description.isNotBlank()) {
@@ -49,6 +66,7 @@ class MainViewModel(private val client: HttpClient) {
 					selectedTarget,
 					description,
 					amount,
+					dateTime.toInstant(TimeZone.currentSystemDefault()),
 				)
 			}
 		}
@@ -72,6 +90,7 @@ class MainViewModel(private val client: HttpClient) {
 		errorMessage = null
 	}
 
+	@OptIn(ExperimentalTime::class)
 	fun clear() {
 		sourceText = ""
 		targetText = ""
@@ -79,5 +98,6 @@ class MainViewModel(private val client: HttpClient) {
 		amount = ""
 		selectedSource = null
 		selectedTarget = null
+		dateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 	}
 }
