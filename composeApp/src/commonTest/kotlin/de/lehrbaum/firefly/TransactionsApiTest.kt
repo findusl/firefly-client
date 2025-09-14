@@ -8,10 +8,13 @@ import io.ktor.http.content.OutgoingContent
 import io.ktor.serialization.kotlinx.json.json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 
 class TransactionsApiTest {
+	@OptIn(ExperimentalTime::class)
 	@Test
 	fun createTransaction_setsJsonContentType() =
 		runTest {
@@ -27,7 +30,15 @@ class TransactionsApiTest {
 				}
 			}
 			val source = Account("1", "Source", "asset")
-			createTransaction(client, source, "Target", null, "desc", "1")
+			createTransaction(
+				client,
+				source,
+				"Target",
+				null,
+				"desc",
+				"1",
+				Instant.fromEpochMilliseconds(0),
+			)
 			assertEquals("application/json", recordedContentType)
 		}
 }
