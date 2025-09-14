@@ -8,6 +8,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -58,6 +59,7 @@ suspend fun createTransaction(
 	client.post("${BuildKonfig.BASE_URL}/api/v1/transactions") {
 		header(HttpHeaders.Authorization, "Bearer ${BuildKonfig.ACCESS_TOKEN}")
 		accept(ContentType.parse("application/vnd.api+json"))
+		contentType(ContentType.Application.Json)
 		setBody(TransactionRequest(listOf(split)))
 	}
 	Napier.d("Transaction created")
