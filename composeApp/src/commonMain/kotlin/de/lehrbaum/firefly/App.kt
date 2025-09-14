@@ -1,5 +1,6 @@
-package de.lehrbaum.firefly
+@file:Suppress("ktlint:standard:no-wildcard-imports")
 
+package de.lehrbaum.firefly
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,9 +31,20 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.format.*
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.ui.tooling.preview.Preview
+
+private val SIMPLE_FORMAT = LocalDateTime.Format {
+	date(LocalDate.Formats.ISO)
+	char(' ')
+	hour()
+	char(':')
+	minute()
+}
 
 @Composable
 @Preview
@@ -141,7 +153,7 @@ fun App() {
 			)
 			OutlinedTextField(
 				modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) showDateTimePicker = true },
-				value = viewModel.dateTime.toString(),
+				value = SIMPLE_FORMAT.format(viewModel.dateTime),
 				onValueChange = {},
 				label = { Text("Date & Time") },
 				readOnly = true,
