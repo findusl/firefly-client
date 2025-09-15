@@ -18,7 +18,6 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,7 +58,6 @@ fun App() {
 			}
 		}
 		val viewModel = remember { MainViewModel(client) }
-		LaunchedEffect(Unit) { viewModel.loadAccounts() }
 		val scope = rememberCoroutineScope()
 		val timeZone = remember { TimeZone.currentSystemDefault() }
 		var showDateTimePicker by remember { mutableStateOf(false) }
@@ -90,12 +88,7 @@ fun App() {
 					onValueChange = viewModel::onSourceTextChange,
 					label = { Text("Source account") },
 				)
-				val suggestions =
-					viewModel.accounts
-						.filter {
-							it.name.contains(viewModel.sourceText, true) &&
-								(it.type == "asset" || it.type == "cash")
-						}.sortedWith(compareBy({ it.type != "cash" }, { it.name.lowercase() }))
+				val suggestions = viewModel.sourceSuggestions
 				DropdownMenu(
 					expanded = viewModel.expandedSource,
 					onDismissRequest = { viewModel.expandedSource = false },
@@ -121,9 +114,7 @@ fun App() {
 					onValueChange = viewModel::onTargetTextChange,
 					label = { Text("Target account") },
 				)
-				val suggestions = viewModel.accounts.filter {
-					it.name.contains(viewModel.targetText, true) && it.id != viewModel.selectedSource?.id
-				}
+				val suggestions = viewModel.targetSuggestions
 				DropdownMenu(
 					expanded = viewModel.expandedTarget,
 					onDismissRequest = { viewModel.expandedTarget = false },
@@ -139,12 +130,31 @@ fun App() {
 					}
 				}
 			}
-			OutlinedTextField(
-				modifier = Modifier.fillMaxWidth(),
-				value = viewModel.description,
-				onValueChange = { viewModel.description = it },
-				label = { Text("Description") },
-			)
+			ExposedDropdownMenuBox(
+				expanded = viewModel.expandedDescription,
+				onExpandedChange = { viewModel.expandedDescription = !viewModel.expandedDescription },
+			) {
+				OutlinedTextField(
+					modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
+					value = viewModel.description,
+					onValueChange = viewModel::onDescriptionTextChange,
+					label = { Text("Description") },
+				)
+				DropdownMenu(
+					expanded = viewModel.expandedDescription,
+					onDismissRequest = { viewModel.expandedDescription = false },
+				) {
+					viewModel.descriptionSuggestions.forEach { suggestion ->
+						DropdownMenuItem(
+							onClick = {
+								viewModel.onDescriptionTextChange(suggestion)
+								viewModel.expandedDescription = false
+							},
+							text = { Text(suggestion) },
+						)
+					}
+				}
+			}
 			OutlinedTextField(
 				modifier = Modifier.fillMaxWidth(),
 				value = viewModel.amount,
