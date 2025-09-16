@@ -1,0 +1,32 @@
+[
+  {
+    "id": "2",
+    "transaction_group_id": "2",
+    "name": "Demo test",
+    "description": "Demo test"
+  },
+  {
+    "id": "8",
+    "transaction_group_id": "8",
+    "name": "some",
+    "description": "some"
+  },
+  {
+    "id": "7",
+    "transaction_group_id": "7",
+    "name": "Payment",
+    "description": "Payment"
+  },
+  {
+    "id": "5",
+    "transaction_group_id": "5",
+    "name": "Demo transaction",
+    "description": "Demo transaction"
+  },
+  {
+    "id": "6",
+    "transaction_group_id": "6",
+    "name": "Initial balance for \"Main account\"",
+    "description": "Initial balance for \"Main account\""
+  }
+]

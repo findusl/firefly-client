@@ -8,22 +8,28 @@ import io.ktor.client.HttpClient
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 
-class MainViewModel(private val client: HttpClient) {
-	var accounts by mutableStateOf<List<Account>>(emptyList())
-		private set
-	var sourceText by mutableStateOf("")
-	var targetText by mutableStateOf("")
-	var description by mutableStateOf("")
+@OptIn(ExperimentalTime::class)
+class MainViewModel(
+	private val client: HttpClient,
+	private val autocompleteApi: AutocompleteApi = AutocompleteApi(client),
+	private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
+) {
+	val sourceField = AutocompleteField(
+		scope,
+		{ query -> autocompleteApi.accounts(query, types = listOf("Asset account")) },
+		Account::name,
+	)
+	val targetField = AutocompleteField(scope, autocompleteApi::accounts, Account::name)
+	val descriptionField = AutocompleteField(scope, { q -> autocompleteApi.transactions(q).map { it.description } }, { it })
+
 	var amount by mutableStateOf("")
-	var expandedSource by mutableStateOf(false)
-	var expandedTarget by mutableStateOf(false)
-	var selectedSource by mutableStateOf<Account?>(null)
-	var selectedTarget by mutableStateOf<Account?>(null)
 	var errorMessage by mutableStateOf<String?>(null)
 
 	@OptIn(ExperimentalTime::class)
@@ -32,39 +38,21 @@ class MainViewModel(private val client: HttpClient) {
 	)
 		private set
 
-	suspend fun loadAccounts() {
-		runNetworkCall {
-			accounts = fetchAccounts(client)
-		}
-	}
-
-	fun onSourceTextChange(text: String) {
-		sourceText = text
-		expandedSource = true
-		selectedSource = accounts.firstOrNull { it.name == text }
-	}
-
-	fun onTargetTextChange(text: String) {
-		targetText = text
-		expandedTarget = true
-		selectedTarget = accounts.firstOrNull { it.name == text }
-	}
-
 	fun onDateTimeChange(newDateTime: LocalDateTime) {
 		dateTime = newDateTime
 	}
 
 	@OptIn(ExperimentalTime::class)
 	suspend fun save() {
-		val src = selectedSource
-		if (src != null && amount.isNotBlank() && description.isNotBlank()) {
+		val src = sourceField.selected
+		if (src != null && amount.isNotBlank() && descriptionField.selectedText.isNotBlank()) {
 			runNetworkCall {
 				createTransaction(
 					client,
 					src,
-					targetText,
-					selectedTarget,
-					description,
+					targetField.selectedText,
+					targetField.selected,
+					descriptionField.selectedText,
 					amount,
 					dateTime.toInstant(TimeZone.currentSystemDefault()),
 				)
@@ -93,12 +81,10 @@ class MainViewModel(private val client: HttpClient) {
 
 	@OptIn(ExperimentalTime::class)
 	fun clear() {
-		sourceText = ""
-		targetText = ""
-		description = ""
+		sourceField.clear()
+		targetField.clear()
+		descriptionField.clear()
 		amount = ""
-		selectedSource = null
-		selectedTarget = null
 		dateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 	}
 }

@@ -42,11 +42,7 @@ suspend fun createTransaction(
 	date: Instant,
 ) {
 	Napier.i("Creating transaction $description $amount from ${source.name} to ${target?.name ?: targetText}")
-	val type = when {
-		target != null && target.type == "asset" -> "transfer"
-		target != null && target.type == "revenue" -> "deposit"
-		else -> "withdrawal"
-	}
+	val type = if (target != null) "transfer" else "withdrawal"
 	val split = TransactionSplitRequest(
 		type = type,
 		date = date.toString(),

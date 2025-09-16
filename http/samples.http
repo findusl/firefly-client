@@ -4,5 +4,12 @@ Accept: application/vnd.api+json
 Authorization: Bearer {{access-token}}
 Content-Type: application/json
 
+### Get autocomplete
+GET {{base-url}}/api/v1/autocomplete/accounts
+    ?types[]=Asset%20account
+Accept: application/vnd.api+json
+Authorization: Bearer {{access-token}}
+Content-Type: application/json
+
 ###
 
