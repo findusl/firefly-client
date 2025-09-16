@@ -83,7 +83,8 @@ class MainViewModel(private val client: HttpClient) {
 				}
 			}.onSuccess {
 				Napier.d("Network call succeeded")
-				errorMessage = null
+				clearError()
+				clear()
 			}
 
 	fun clearError() {
