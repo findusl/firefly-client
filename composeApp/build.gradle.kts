@@ -58,6 +58,8 @@ kotlin {
 			implementation(libs.kotlin.test)
 			implementation(libs.ktor.client.mock)
 			implementation(libs.kotlinx.coroutines.test)
+			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+			implementation(compose.uiTest)
 		}
 	}
 }
