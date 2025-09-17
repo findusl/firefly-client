@@ -9,6 +9,8 @@ import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -28,18 +30,19 @@ private data class CacheEntry<T>(val value: T)
 class AutocompleteApi(
 	private val client: HttpClient,
 ) {
-	private val accountCache = mutableMapOf<String, CacheEntry<List<Account>>>()
-	private val transactionCache = mutableMapOf<String, CacheEntry<List<TransactionSuggestion>>>()
+	private val accountCache = mutableMapOf<String, CacheEntry<PersistentList<Account>>>()
+	private val transactionCache = mutableMapOf<String, CacheEntry<PersistentList<TransactionSuggestion>>>()
 
 	suspend fun accounts(query: String): List<Account> {
 		accountCache[query]?.let { return it.value }
 		Napier.i("Fetching accounts autocomplete for '$query'")
-		val response: List<Account> = client
+		val response: PersistentList<Account> = client
 			.get("${BuildKonfig.BASE_URL}/api/v1/autocomplete/accounts") {
 				header(HttpHeaders.Authorization, "Bearer ${BuildKonfig.ACCESS_TOKEN}")
 				accept(ContentType.Application.Json)
 				parameter("query", query)
-			}.body()
+			}.body<List<Account>>()
+			.toPersistentList()
 		accountCache[query] = CacheEntry(response)
 		return response
 	}
@@ -47,12 +50,13 @@ class AutocompleteApi(
 	suspend fun transactions(query: String): List<TransactionSuggestion> {
 		transactionCache[query]?.let { return it.value }
 		Napier.i("Fetching transactions autocomplete for '$query'")
-		val response: List<TransactionSuggestion> = client
+		val response: PersistentList<TransactionSuggestion> = client
 			.get("${BuildKonfig.BASE_URL}/api/v1/autocomplete/transactions") {
 				header(HttpHeaders.Authorization, "Bearer ${BuildKonfig.ACCESS_TOKEN}")
 				accept(ContentType.Application.Json)
 				parameter("query", query)
-			}.body()
+			}.body<List<TransactionSuggestion>>()
+			.toPersistentList()
 		transactionCache[query] = CacheEntry(response)
 		return response
 	}

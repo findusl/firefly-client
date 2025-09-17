@@ -45,6 +45,7 @@ kotlin {
 			implementation(libs.ktor.client.core)
 			implementation(libs.ktor.client.contentNegotiation)
 			implementation(libs.ktor.serialization.kotlinxJson)
+			implementation(libs.kotlinx.collections.immutable)
 			implementation(libs.kotlinx.datetime)
 			implementation(libs.napier)
 		}

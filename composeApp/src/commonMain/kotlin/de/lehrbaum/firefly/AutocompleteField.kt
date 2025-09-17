@@ -6,6 +6,9 @@ import androidx.compose.runtime.setValue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,26 +20,29 @@ import kotlinx.coroutines.launch
 class AutocompleteField<T>(
 	private val scope: CoroutineScope,
 	private val fetcher: suspend (String) -> List<T>,
+	/**
+	 * Extracts the display text for an item returned by [fetcher]. Allows callers to supply the
+	 * human-readable label without forcing [T] to implement a particular interface.
+	 */
 	private val textOf: (T) -> String = { it.toString() },
 	debounce: Duration = 300.milliseconds,
 ) {
 	var text by mutableStateOf("")
 	var expanded by mutableStateOf(false)
 	var selected by mutableStateOf<T?>(null)
-	var suggestions by mutableStateOf<List<T>>(emptyList())
+	var suggestions by mutableStateOf<PersistentList<T>>(persistentListOf())
 		private set
 
 	val selectedText: String
 		get() = selected?.let(textOf) ?: text
 
 	private val query = MutableStateFlow("")
-	private var fullSuggestions: List<T> = emptyList()
 
 	init {
 		scope.launch {
 			query.debounce(debounce).collectLatest { q ->
-				fullSuggestions = fetcher(q)
-				filter()
+				suggestions = fetcher(q).toPersistentList()
+				selected = suggestions.firstOrNull { textOf(it) == text }
 			}
 		}
 	}
@@ -44,28 +50,21 @@ class AutocompleteField<T>(
 	fun onTextChange(newText: String) {
 		text = newText
 		expanded = true
-		filter()
+		selected = suggestions.firstOrNull { textOf(it) == newText }
 		query.value = newText
-	}
-
-	private fun filter() {
-		suggestions = fullSuggestions.filter { textOf(it).contains(text, ignoreCase = true) }
-		selected = suggestions.firstOrNull { textOf(it) == text }
 	}
 
 	fun select(item: T) {
 		text = textOf(item)
 		selected = item
 		expanded = false
-		filter()
 	}
 
 	fun clear() {
 		text = ""
 		expanded = false
 		selected = null
-		suggestions = emptyList()
-		fullSuggestions = emptyList()
+		suggestions = persistentListOf()
 		query.value = ""
 	}
 
