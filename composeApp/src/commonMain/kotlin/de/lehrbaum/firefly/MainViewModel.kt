@@ -3,6 +3,7 @@ package de.lehrbaum.firefly
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.russhwolf.settings.Settings
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import kotlin.time.Clock
@@ -21,6 +22,12 @@ class MainViewModel(
 	private val autocompleteApi: AutocompleteApi = AutocompleteApi(client),
 	private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) {
+	companion object {
+		private const val LAST_SOURCE_ACCOUNT_KEY = "last_source_account"
+	}
+
+	private val settings: Settings = Settings()
+
 	val sourceField = AutocompleteField(
 		scope,
 		{ query -> autocompleteApi.accounts(query, types = listOf("Asset account")) },
@@ -41,6 +48,10 @@ class MainViewModel(
 	)
 		private set
 
+	init {
+		prefillLastSource()
+	}
+
 	fun onDateTimeChange(newDateTime: LocalDateTime) {
 		dateTime = newDateTime
 	}
@@ -52,20 +63,22 @@ class MainViewModel(
 		val src = sourceField.selected
 		if (src != null && amount.isNotBlank() && descriptionField.selectedText.isNotBlank()) {
 			isSaving = true
-			try {
-				runNetworkCall {
-					createTransaction(
-						client,
-						src,
-						targetField.selectedText,
-						targetField.selected,
-						descriptionField.selectedText,
-						amount,
-						dateTime.toInstant(TimeZone.currentSystemDefault()),
-						tagField.selectedText.takeIf { it.isNotBlank() },
-					)
-				}
-			} finally {
+			val savedSourceText = sourceField.selectedText
+			runNetworkCall {
+				createTransaction(
+					client,
+					src,
+					targetField.selectedText,
+					targetField.selected,
+					descriptionField.selectedText,
+					amount,
+					dateTime.toInstant(TimeZone.currentSystemDefault()),
+					tagField.selectedText.takeIf { it.isNotBlank() },
+				)
+			}.onSuccess {
+				settings.putString(LAST_SOURCE_ACCOUNT_KEY, savedSourceText)
+				clear(keepSource = true)
+			}.also {
 				isSaving = false
 			}
 		}
@@ -76,7 +89,6 @@ class MainViewModel(
 			Result.success(block()).also {
 				Napier.d("Network call succeeded")
 				clearError()
-				clear()
 			}
 		} catch (throwable: Throwable) {
 			if (throwable is CancellationException) {
@@ -93,12 +105,21 @@ class MainViewModel(
 	}
 
 	@OptIn(ExperimentalTime::class)
-	fun clear() {
-		sourceField.clear()
+	fun clear(keepSource: Boolean = false) {
+		if (!keepSource) {
+			sourceField.clear()
+		}
 		targetField.clear()
 		descriptionField.clear()
 		tagField.clear()
 		amount = ""
 		dateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+	}
+
+	private fun prefillLastSource() {
+		val savedSourceAccount = settings.getStringOrNull(LAST_SOURCE_ACCOUNT_KEY)
+		if (!savedSourceAccount.isNullOrBlank()) {
+			sourceField.prefill(savedSourceAccount)
+		}
 	}
 }

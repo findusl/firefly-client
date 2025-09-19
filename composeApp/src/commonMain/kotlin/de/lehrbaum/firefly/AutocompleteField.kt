@@ -68,5 +68,12 @@ class AutocompleteField<T>(
 		query.value = ""
 	}
 
+	fun prefill(prefillText: String) {
+		text = prefillText
+		expanded = false
+		selected = suggestions.firstOrNull { textOf(it) == prefillText }
+		query.value = prefillText
+	}
+
 	fun itemText(item: T): String = textOf(item)
 }
