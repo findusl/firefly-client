@@ -48,6 +48,8 @@ kotlin {
 			implementation(libs.kotlinx.collections.immutable)
 			implementation(libs.kotlinx.datetime)
 			implementation(libs.napier)
+			implementation(libs.multiplatform.settings)
+			implementation(libs.multiplatform.settings.noarg)
 		}
 		iosArm64Main.dependencies {
 			implementation(libs.ktor.client.darwin)
