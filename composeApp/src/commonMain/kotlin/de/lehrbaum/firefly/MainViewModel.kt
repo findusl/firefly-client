@@ -47,13 +47,14 @@ class MainViewModel(
 		val src = sourceField.selected
 		if (src != null && amount.isNotBlank() && descriptionField.selectedText.isNotBlank()) {
 			runNetworkCall {
+				val normalizedAmount = AmountParser.parseToApiFormat(amount)
 				createTransaction(
 					client,
 					src,
 					targetField.selectedText,
 					targetField.selected,
 					descriptionField.selectedText,
-					amount,
+					normalizedAmount,
 					dateTime.toInstant(TimeZone.currentSystemDefault()),
 				)
 			}
