@@ -31,6 +31,8 @@ class MainViewModel(
 
 	var amount by mutableStateOf("")
 	var errorMessage by mutableStateOf<String?>(null)
+	var isSaving by mutableStateOf(false)
+		private set
 
 	@OptIn(ExperimentalTime::class)
 	var dateTime by mutableStateOf(
@@ -44,36 +46,45 @@ class MainViewModel(
 
 	@OptIn(ExperimentalTime::class)
 	suspend fun save() {
+		if (isSaving) return
+
 		val src = sourceField.selected
 		if (src != null && amount.isNotBlank() && descriptionField.selectedText.isNotBlank()) {
-			runNetworkCall {
-				createTransaction(
-					client,
-					src,
-					targetField.selectedText,
-					targetField.selected,
-					descriptionField.selectedText,
-					amount,
-					dateTime.toInstant(TimeZone.currentSystemDefault()),
-				)
+			isSaving = true
+			try {
+				runNetworkCall {
+					createTransaction(
+						client,
+						src,
+						targetField.selectedText,
+						targetField.selected,
+						descriptionField.selectedText,
+						amount,
+						dateTime.toInstant(TimeZone.currentSystemDefault()),
+					)
+				}
+			} finally {
+				isSaving = false
 			}
 		}
 	}
 
-	private inline fun <T> runNetworkCall(block: () -> T): Result<T> =
-		runCatching(block)
-			.onFailure {
-				if (it is CancellationException) {
-					throw it
-				} else {
-					Napier.e("Network call failed", it)
-					errorMessage = "Failed to reach server"
-				}
-			}.onSuccess {
+	private suspend fun <T> runNetworkCall(block: suspend () -> T): Result<T> =
+		try {
+			Result.success(block()).also {
 				Napier.d("Network call succeeded")
 				clearError()
 				clear()
 			}
+		} catch (throwable: Throwable) {
+			if (throwable is CancellationException) {
+				throw throwable
+			} else {
+				Napier.e("Network call failed", throwable)
+				errorMessage = "Failed to reach server"
+			}
+			Result.failure(throwable)
+		}
 
 	fun clearError() {
 		errorMessage = null

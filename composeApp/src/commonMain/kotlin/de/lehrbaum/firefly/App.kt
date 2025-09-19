@@ -4,11 +4,15 @@ package de.lehrbaum.firefly
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -91,7 +95,20 @@ fun App() {
 				readOnly = true,
 			)
 			Row(modifier = Modifier.fillMaxWidth()) {
-				Button(onClick = { scope.launch { viewModel.save() } }) { Text("Save") }
+				Button(
+					onClick = { scope.launch { viewModel.save() } },
+					enabled = !viewModel.isSaving,
+				) {
+					if (viewModel.isSaving) {
+						CircularProgressIndicator(
+							modifier = Modifier.size(16.dp),
+							color = MaterialTheme.colorScheme.onPrimary,
+							strokeWidth = 2.dp,
+						)
+						Spacer(Modifier.width(8.dp))
+					}
+					Text("Save")
+				}
 				Button(onClick = { viewModel.clear() }) { Text("Clear") }
 			}
 		}
