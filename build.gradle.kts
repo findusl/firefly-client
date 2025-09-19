@@ -21,3 +21,14 @@ allprojects {
 		}
 	}
 }
+
+tasks.register("checkAgentsEnvironment") {
+	group = "verification"
+	description = "Runs all tests that are expected to pass in the agent environment"
+	dependsOn(
+		":composeApp:testDebugUnitTest",
+		":composeApp:testReleaseUnitTest",
+	)
+	dependsOn("ktlintCheck")
+	dependsOn(subprojects.map { "${it.path}:ktlintCheck" })
+}
