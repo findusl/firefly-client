@@ -9,17 +9,24 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> AutocompleteTextField(field: AutocompleteField<T>, label: String) {
+	val focusRequester = remember { FocusRequester() }
 	ExposedDropdownMenuBox(
 		expanded = field.expanded,
-		onExpandedChange = { field.expanded = !field.expanded },
+		onExpandedChange = { expanded ->
+			focusRequester.requestFocus()
+			field.expanded = expanded
+		},
 	) {
 		OutlinedTextField(
-			modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
+			modifier = Modifier.fillMaxWidth().focusRequester(focusRequester).menuAnchor(MenuAnchorType.PrimaryEditable),
 			value = field.text,
 			onValueChange = field::onTextChange,
 			label = { Text(label) },
