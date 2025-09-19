@@ -28,6 +28,7 @@ class MainViewModel(
 	)
 	val targetField = AutocompleteField(scope, autocompleteApi::accounts, Account::name)
 	val descriptionField = AutocompleteField(scope, { q -> autocompleteApi.transactions(q).map { it.description } }, { it })
+	val tagField = AutocompleteField(scope, autocompleteApi::tags, TagSuggestion::tag)
 
 	var amount by mutableStateOf("")
 	var errorMessage by mutableStateOf<String?>(null)
@@ -54,6 +55,7 @@ class MainViewModel(
 					targetField.selected,
 					descriptionField.selectedText,
 					amount,
+					tagField.selectedText.trim().takeIf { it.isNotEmpty() },
 					dateTime.toInstant(TimeZone.currentSystemDefault()),
 				)
 			}
@@ -84,6 +86,7 @@ class MainViewModel(
 		sourceField.clear()
 		targetField.clear()
 		descriptionField.clear()
+		tagField.clear()
 		amount = ""
 		dateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 	}

@@ -23,6 +23,7 @@ private data class TransactionSplitRequest(
 	@SerialName("source_id") val sourceId: String,
 	@SerialName("destination_id") val destinationId: String? = null,
 	@SerialName("destination_name") val destinationName: String? = null,
+	val tags: List<String>? = null,
 )
 
 @Serializable
@@ -39,6 +40,7 @@ suspend fun createTransaction(
 	target: Account?,
 	description: String,
 	amount: String,
+	tag: String?,
 	date: Instant,
 ) {
 	Napier.i("Creating transaction $description $amount from ${source.name} to ${target?.name ?: targetText}")
@@ -51,6 +53,7 @@ suspend fun createTransaction(
 		sourceId = source.id,
 		destinationId = target?.id,
 		destinationName = if (target == null) targetText else null,
+		tags = tag?.let(::listOf),
 	)
 	client.post("${BuildKonfig.BASE_URL}/api/v1/transactions") {
 		header(HttpHeaders.Authorization, "Bearer ${BuildKonfig.ACCESS_TOKEN}")
