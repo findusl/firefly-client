@@ -28,7 +28,15 @@ class UiTestRule : TestRule {
 			}
 		}
 
-	private fun Description.shouldSkipUiTest(): Boolean = getAnnotation(UiTest::class.java) != null || testClass?.getAnnotation(UiTest::class.java) != null
+	private fun Description.shouldSkipUiTest(): Boolean {
+		if (getAnnotation(UiTest::class.java) != null) return true
+		if (annotations.any { it.annotationClass == UiTest::class }) return true
+		val resolvedClass = testClass ?: className?.let { runCatching { Class.forName(it) }.getOrNull() }
+		if (resolvedClass?.getAnnotation(UiTest::class.java) != null) return true
+		return annotations.any { annotation ->
+			annotation is Category && annotation.value.any { it == UiTestCategory::class.java }
+		}
+	}
 
 	private companion object {
 		private const val SKIP_UI_TESTS_PROPERTY = "firefly.skipUiTests"
