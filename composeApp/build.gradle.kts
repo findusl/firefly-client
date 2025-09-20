@@ -1,4 +1,5 @@
 import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
+import org.gradle.api.tasks.testing.Test
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -64,6 +65,10 @@ kotlin {
 			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
 			implementation(compose.uiTest)
 		}
+		androidUnitTest.dependencies {
+			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+			implementation(compose.uiTest)
+		}
 	}
 }
 
@@ -107,4 +112,30 @@ android {
 
 dependencies {
 	debugImplementation(compose.uiTooling)
+}
+
+val startTaskNames = gradle.startParameter.taskNames
+val shouldSkipUiTests = startTaskNames.any { taskName ->
+	val simpleName = taskName.substringAfterLast(":")
+	simpleName == "unitTestsWithoutUi" || simpleName == "checkAgentsEnvironment"
+}
+
+tasks.withType<Test>().configureEach {
+	systemProperty("firefly.skipUiTests", shouldSkipUiTests.toString())
+	if (shouldSkipUiTests) {
+		useJUnit {
+			excludeCategories("de.lehrbaum.firefly.testing.UiTestCategory")
+		}
+	}
+}
+
+tasks.register("unitTestsWithoutUi") {
+	group = "verification"
+	description = "Runs JVM unit tests excluding those annotated with @UiTest."
+	notCompatibleWithConfigurationCache("Adjusts test filtering based on requested tasks.")
+	dependsOn("testDebugUnitTest", "testReleaseUnitTest")
+}
+
+tasks.named("check") {
+	dependsOn("testDebugUnitTest", "testReleaseUnitTest")
 }
