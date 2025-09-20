@@ -25,9 +25,9 @@ allprojects {
 tasks.register("checkAgentsEnvironment") {
 	group = "verification"
 	description = "Runs all tests that are expected to pass in the agent environment"
+	notCompatibleWithConfigurationCache("Runs unitTestsWithoutUi which configures test filtering at execution time.")
 	dependsOn(
-		":composeApp:testDebugUnitTest",
-		":composeApp:testReleaseUnitTest",
+		":composeApp:unitTestsWithoutUi",
 	)
 	dependsOn("ktlintCheck")
 	dependsOn(subprojects.map { "${it.path}:ktlintCheck" })
