@@ -68,6 +68,7 @@ kotlin {
 		androidUnitTest.dependencies {
 			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
 			implementation(compose.uiTest)
+			implementation(libs.robolectric)
 		}
 	}
 }
@@ -125,6 +126,9 @@ tasks.withType<Test>().configureEach {
 	if (shouldSkipUiTests) {
 		useJUnit {
 			excludeCategories("de.lehrbaum.firefly.testing.UiTestCategory")
+		}
+		filter {
+			excludeTestsMatching("*UiTest")
 		}
 	}
 }
