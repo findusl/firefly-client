@@ -1,16 +1,14 @@
 package de.lehrbaum.firefly
 
-import kotlinx.cinterop.alloc
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.ptr
-import kotlinx.cinterop.value
-import platform.Foundation.NSDecimal
-import platform.Foundation.NSDecimalString
+import kotlinx.cinterop.ExperimentalForeignApi
+import platform.Foundation.NSDecimalNumber
 import platform.Foundation.NSLocale
 import platform.Foundation.NSNumberFormatter
 import platform.Foundation.NSNumberFormatterDecimalStyle
 import platform.Foundation.currentLocale
+import platform.Foundation.decimalValue
 
+@OptIn(ExperimentalForeignApi::class)
 actual fun parseAmount(input: String): ParsedAmount? {
 	val trimmedInput = input.trim()
 	if (trimmedInput.isEmpty()) return null
@@ -20,11 +18,6 @@ actual fun parseAmount(input: String): ParsedAmount? {
 	formatter.numberStyle = NSNumberFormatterDecimalStyle
 	val number = formatter.numberFromString(trimmedInput) ?: return null
 
-	val decimalValue = number.decimalValue
-	val normalized = memScoped {
-		val decimal = alloc<NSDecimal>()
-		decimal.value = decimalValue
-		NSDecimalString(decimal.ptr, null)
-	}
+	val normalized = NSDecimalNumber(decimal = number.decimalValue).description ?: return null
 	return ParsedAmount(normalized)
 }
