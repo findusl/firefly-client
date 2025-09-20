@@ -25,6 +25,13 @@ data class TransactionSuggestion(
 	val description: String,
 )
 
+@Serializable
+data class TagSuggestion(
+	val id: String,
+	val name: String,
+	val tag: String,
+)
+
 private data class CacheEntry<T>(val value: T)
 
 private data class AccountQueryKey(val query: String, val types: List<String>?)
@@ -34,6 +41,7 @@ class AutocompleteApi(
 ) {
 	private val accountCache = mutableMapOf<AccountQueryKey, CacheEntry<PersistentList<Account>>>()
 	private val transactionCache = mutableMapOf<String, CacheEntry<PersistentList<TransactionSuggestion>>>()
+	private val tagCache = mutableMapOf<String, CacheEntry<PersistentList<TagSuggestion>>>()
 
 	suspend fun accounts(query: String, types: List<String>? = null): List<Account> {
 		val cacheKey = AccountQueryKey(query, types?.toList())
@@ -64,6 +72,20 @@ class AutocompleteApi(
 			}.body<List<TransactionSuggestion>>()
 			.toPersistentList()
 		transactionCache[query] = CacheEntry(response)
+		return response
+	}
+
+	suspend fun tags(query: String): List<TagSuggestion> {
+		tagCache[query]?.let { return it.value }
+		Napier.i("Fetching tags autocomplete for '$query'")
+		val response: PersistentList<TagSuggestion> = client
+			.get("${BuildKonfig.BASE_URL}/api/v1/autocomplete/tags") {
+				header(HttpHeaders.Authorization, "Bearer ${BuildKonfig.ACCESS_TOKEN}")
+				accept(ContentType.Application.Json)
+				parameter("query", query)
+			}.body<List<TagSuggestion>>()
+			.toPersistentList()
+		tagCache[query] = CacheEntry(response)
 		return response
 	}
 }
