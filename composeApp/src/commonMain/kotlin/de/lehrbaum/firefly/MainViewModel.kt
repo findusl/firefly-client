@@ -62,6 +62,13 @@ class MainViewModel(
 
 		val src = sourceField.selected
 		if (src != null && amount.isNotBlank() && descriptionField.selectedText.isNotBlank()) {
+			val parsedAmount = parseAmount(amount)
+			if (parsedAmount == null) {
+				errorMessage = "Invalid amount"
+				return
+			}
+			clearError()
+			val normalizedAmount = parsedAmount.plainString
 			isSaving = true
 			val savedSourceText = sourceField.selectedText
 			runNetworkCall {
@@ -71,7 +78,7 @@ class MainViewModel(
 					targetField.selectedText,
 					targetField.selected,
 					descriptionField.selectedText,
-					amount,
+					normalizedAmount,
 					dateTime.toInstant(TimeZone.currentSystemDefault()),
 					tagField.selectedText.takeIf { it.isNotBlank() },
 				)
