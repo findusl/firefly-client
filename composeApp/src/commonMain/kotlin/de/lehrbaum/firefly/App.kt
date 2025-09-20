@@ -81,6 +81,7 @@ fun App() {
 			AutocompleteTextField(field = viewModel.sourceField, label = "Source account")
 			AutocompleteTextField(field = viewModel.targetField, label = "Target account")
 			AutocompleteTextField(field = viewModel.descriptionField, label = "Description")
+			AutocompleteTextField(field = viewModel.tagField, label = "Tag (optional)")
 			OutlinedTextField(
 				modifier = Modifier.fillMaxWidth(),
 				value = viewModel.amount,
