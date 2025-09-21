@@ -1,4 +1,5 @@
 import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
+import org.gradle.api.tasks.testing.Test
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -61,6 +62,13 @@ kotlin {
 			implementation(compose.desktop.currentOs)
 			implementation(libs.ktor.client.cio)
 		}
+		jvmTest.dependencies {
+			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+			implementation(compose.uiTest)
+			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+			implementation(compose.desktop.uiTestJUnit4)
+			implementation(libs.junit)
+		}
 		iosArm64Main.dependencies {
 			implementation(libs.ktor.client.darwin)
 		}
@@ -74,6 +82,19 @@ kotlin {
 			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
 			implementation(compose.uiTest)
 		}
+	}
+}
+
+val jvmTestTask = tasks.named<Test>("jvmTest")
+
+tasks.register<Test>("jvmNonUiTest") {
+	group = "verification"
+	description = "Runs JVM tests excluding UI tests that require a display"
+	dependsOn(tasks.named("jvmTestClasses"))
+	testClassesDirs = jvmTestTask.get().testClassesDirs
+	classpath = jvmTestTask.get().classpath
+	useJUnit {
+		excludeCategories("de.lehrbaum.firefly.UiTest")
 	}
 }
 

@@ -40,5 +40,6 @@ use `python openapi_helper.py /v1/accounts --request` to fetch the same data.
 - Add tests for new features whenever possible.
 - Use `kotlin.test` for unit tests in shared code.
 - Use the Compose UI Test toolkit for UI testing.
+- Compose UI tests should not use `waitForIdle`; prefer `waitUntil` or one of its variants instead.
 - Use `kotlinx.coroutines.test` (e.g. `runTest`) for coroutine-based code.
 - Run `./gradlew checkAgentsEnvironment --console=plain` before committing.
