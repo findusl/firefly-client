@@ -2,12 +2,12 @@ package de.lehrbaum.firefly
 
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import androidx.compose.ui.window.exitApplication
+import kotlin.system.exitProcess
 
 fun main() {
 	initLogger()
 	application {
-		Window(onCloseRequest = ::exitApplication, title = "Firefly Client") {
+		Window(onCloseRequest = { exitProcess(0) }, title = "Firefly Client") {
 			App()
 		}
 	}
