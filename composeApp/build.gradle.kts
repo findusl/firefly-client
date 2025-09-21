@@ -17,6 +17,12 @@ kotlin {
 		}
 	}
 
+	jvm {
+		compilerOptions {
+			jvmTarget.set(JvmTarget.JVM_11)
+		}
+	}
+
 	listOf(
 		iosArm64(),
 		iosSimulatorArm64(),
@@ -51,6 +57,10 @@ kotlin {
 			implementation(libs.multiplatform.settings)
 			implementation(libs.multiplatform.settings.noarg)
 		}
+		jvmMain.dependencies {
+			implementation(compose.desktop.currentOs)
+			implementation(libs.ktor.client.cio)
+		}
 		iosArm64Main.dependencies {
 			implementation(libs.ktor.client.darwin)
 		}
@@ -64,6 +74,12 @@ kotlin {
 			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
 			implementation(compose.uiTest)
 		}
+	}
+}
+
+compose.desktop {
+	application {
+		mainClass = "de.lehrbaum.firefly.DesktopAppKt"
 	}
 }
 
