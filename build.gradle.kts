@@ -28,6 +28,7 @@ tasks.register("checkAgentsEnvironment") {
 	dependsOn(
 		":composeApp:testDebugUnitTest",
 		":composeApp:testReleaseUnitTest",
+		":composeApp:jvmTest",
 	)
 	dependsOn("ktlintCheck")
 	dependsOn(subprojects.map { "${it.path}:ktlintCheck" })
