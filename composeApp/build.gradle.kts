@@ -90,7 +90,7 @@ val jvmTest by tasks.existing(Test::class)
 
 tasks.register<Test>("jvmNonUiTest") {
 	group = JavaBasePlugin.VERIFICATION_GROUP
-	description = "Runs JVM tests except those marked with @UiTest"
+	description = "Runs JVM tests except those in the UiTest category"
 	testClassesDirs = jvmTest.get().testClassesDirs
 	classpath = jvmTest.get().classpath
 	useJUnit {

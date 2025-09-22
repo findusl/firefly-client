@@ -2,24 +2,20 @@ package de.lehrbaum.firefly
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.test.waitUntilAtLeastOneExists
-import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.categories.Category
 
 @OptIn(ExperimentalTestApi::class)
-@UiTest
 @Category(UiTest::class)
 class AppTextFieldsUiTest {
-	@get:Rule
-	val composeTestRule = createComposeRule()
-
 	@Test
-	fun displaysAllTextFields() {
-		composeTestRule.setContent { App() }
+	fun displaysAllTextFields() =
+		runComposeUiTest {
+			setContent { App() }
 
-		listOf(
+			listOf(
 			"Source account",
 			"Target account",
 			"Description",
@@ -27,7 +23,7 @@ class AppTextFieldsUiTest {
 			"Amount",
 			"Date & Time",
 		).forEach { label ->
-			composeTestRule.waitUntilAtLeastOneExists(hasText(label))
+			waitUntilAtLeastOneExists(hasText(label))
 		}
 	}
 }
