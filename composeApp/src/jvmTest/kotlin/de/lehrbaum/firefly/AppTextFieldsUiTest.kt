@@ -4,8 +4,6 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.waitUntilAtLeastOneExists
-import java.awt.GraphicsEnvironment
-import org.junit.Assume.assumeFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.categories.Category
@@ -15,10 +13,7 @@ import org.junit.experimental.categories.Category
 @Category(UiTest::class)
 class AppTextFieldsUiTest {
 	@get:Rule
-	val composeTestRule = run {
-		assumeFalse(GraphicsEnvironment.isHeadless())
-		createComposeRule()
-	}
+	val composeTestRule = createComposeRule()
 
 	@Test
 	fun displaysAllTextFields() {
