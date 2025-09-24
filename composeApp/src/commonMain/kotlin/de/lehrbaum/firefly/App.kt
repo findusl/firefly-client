@@ -48,16 +48,19 @@ private val SIMPLE_FORMAT = LocalDateTime.Format {
 @Composable
 @Preview
 @OptIn(ExperimentalMaterial3Api::class)
-fun App() {
-	MaterialTheme {
-		val client = remember {
+fun App(
+	viewModelFactory: () -> MainViewModel = {
+		MainViewModel(
 			HttpClient {
 				install(ContentNegotiation) {
 					json(Json { ignoreUnknownKeys = true })
 				}
-			}
-		}
-		val viewModel = remember { MainViewModel(client) }
+			},
+		)
+	},
+) {
+	MaterialTheme {
+		val viewModel = remember(viewModelFactory) { viewModelFactory() }
 		val scope = rememberCoroutineScope()
 		val timeZone = remember { TimeZone.currentSystemDefault() }
 		var showDateTimePicker by remember { mutableStateOf(false) }
