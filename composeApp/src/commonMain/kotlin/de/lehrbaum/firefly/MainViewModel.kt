@@ -6,6 +6,8 @@ import androidx.compose.runtime.setValue
 import com.russhwolf.settings.Settings
 import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.ResponseException
+import io.ktor.client.statement.bodyAsText
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.CancellationException
@@ -15,6 +17,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.io.IOException
 
 @OptIn(ExperimentalTime::class)
 class MainViewModel(
@@ -97,11 +100,38 @@ class MainViewModel(
 				clearError()
 			}
 		} catch (throwable: Throwable) {
-			if (throwable is CancellationException) {
-				throw throwable
-			} else {
-				Napier.e("Network call failed", throwable)
-				errorMessage = "Failed to reach server"
+			when (throwable) {
+				is CancellationException -> throw throwable
+				is ResponseException -> {
+					Napier.e("Network call failed with response", throwable)
+					val response = throwable.response
+					val status = response.status
+					val url = response.call.request.url
+					val body = runCatching { response.bodyAsText() }.getOrNull()?.takeIf { it.isNotBlank() }
+					val statusInfo = "${status.value} ${status.description}"
+					val bodyInfo = body?.let {
+						if (it.length > 500) it.take(497) + "..." else it
+					}
+					errorMessage = buildString {
+						append("Request to ")
+						append(url)
+						append(" failed (")
+						append(statusInfo)
+						append(')')
+						if (bodyInfo != null) {
+							append(": ")
+							append(bodyInfo)
+						}
+					}
+				}
+				is IOException -> {
+					Napier.e("Network call failed due to I/O error", throwable)
+					errorMessage = "Connection failed"
+				}
+				else -> {
+					Napier.e("Network call failed", throwable)
+					errorMessage = throwable.message ?: "Unexpected error"
+				}
 			}
 			Result.failure(throwable)
 		}
