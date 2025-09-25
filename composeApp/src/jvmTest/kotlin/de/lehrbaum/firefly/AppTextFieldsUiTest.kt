@@ -12,8 +12,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
-import org.junit.runner.Description
-import org.junit.runners.model.Statement
 
 @OptIn(ExperimentalTestApi::class)
 @Category(UiTest::class)
@@ -46,15 +44,5 @@ class AppTextFieldsUiTest {
 		).forEach { label ->
 			composeTestRule.waitUntilAtLeastOneExists(hasText(label))
 		}
-	}
-
-	private object HeadlessSkipRule : TestRule {
-		override fun apply(base: Statement, description: Description): Statement =
-			object : Statement() {
-				override fun evaluate() {
-					assumeFalse(GraphicsEnvironment.isHeadless())
-					base.evaluate()
-				}
-			}
 	}
 }
