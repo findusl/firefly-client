@@ -48,7 +48,7 @@ fun logWarn(message: String) = println("WARN: $message")
 fun logError(message: String) = println("ERROR: $message")
 
 fun usage(): Nothing {
-	System.err.println("Usage: reassignGooglePayTransactions <csv-file> [--source-account-id=<id>]")
+	System.err.println("Usage: reassignGooglePayTransactions <csv-file> [-f] [--source-account-id=<id>]")
 	exitProcess(1)
 }
 
@@ -57,12 +57,21 @@ fun main(args: Array<String>) {
 
 	val csvPath = args.first()
 	var googlePayAccountId = DEFAULT_GOOGLE_PAY_ACCOUNT_ID
+	var force = false
 	for (rawArg in args.drop(1)) {
 		when {
+			rawArg == "-f" || rawArg == "--force" -> force = true
 			rawArg.startsWith("--source-account-id=") -> googlePayAccountId = rawArg.substringAfter('=')
 			rawArg == "--source-account-id" -> usage()
 			else -> usage()
 		}
+	}
+
+	val dryRun = !force
+	if (dryRun) {
+		logInfo("Running in dry-run mode. No changes will be sent to Firefly III.")
+	} else {
+		logWarn("Force flag supplied; updates will be applied to Firefly III.")
 	}
 
 	val baseUrl = System.getenv("BASE_URL") ?: run {
@@ -213,6 +222,7 @@ fun main(args: Array<String>) {
 	var merchantAccountsReused = 0
 	var journalsUpdated = 0
 	var journalsFailed = 0
+	var journalsPlanned = 0
 
 	runBlocking {
 		var page = 1
@@ -286,6 +296,11 @@ fun main(args: Array<String>) {
 					logWarn("Merchant account already exists for '$merchant' (id=$existing); reusing.")
 					continue
 				}
+			}
+			if (dryRun) {
+				logInfo("Dry run: would create expense account '$merchant'.")
+				merchantAccountIds[merchant] = "(dry-run-new-account)"
+				continue
 			}
 			val createBody = buildJsonObject {
 				put("name", merchant)
@@ -399,6 +414,11 @@ fun main(args: Array<String>) {
 					put("description", merchant)
 					put("notes", updatedNotes)
 				}
+				if (dryRun) {
+					journalsPlanned += 1
+					logInfo("Dry run: would update journal ${match.journalId} for merchant '$merchant'.")
+					continue
+				}
 				val requestBody = buildJsonObject {
 					put("apply_rules", false)
 					put("fire_webhooks", false)
@@ -434,6 +454,10 @@ fun main(args: Array<String>) {
 			"E2E not found=$e2eNotFoundCount, " +
 			"merchant accounts created=$merchantAccountsCreated, " +
 			"merchant accounts reused=$merchantAccountsReused, " +
-			"journals updated=$journalsUpdated, journals failed=$journalsFailed.",
+			"journals updated=$journalsUpdated, " +
+			"journals planned (dry-run)=$journalsPlanned, journals failed=$journalsFailed.",
 	)
+	if (dryRun) {
+		logInfo("Dry run complete. Re-run with -f to apply these changes.")
+	}
 }
