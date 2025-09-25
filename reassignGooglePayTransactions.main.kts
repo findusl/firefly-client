@@ -31,6 +31,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 const val TARGET_IBAN = "DE96120300009005290904"
 const val PROVENANCE_NOTE = "Paid via Google Pay (IBAN DE96120300009005290904)."
