@@ -42,22 +42,22 @@ kotlin {
 			implementation(libs.ktor.client.cio)
 		}
 		commonMain.dependencies {
-			implementation(compose.runtime)
-			implementation(compose.foundation)
-			implementation(compose.ui)
 			implementation(compose.components.resources)
 			implementation(compose.components.uiToolingPreview)
-			implementation(libs.androidx.lifecycle.viewmodelCompose)
+			implementation(compose.foundation)
+			implementation(compose.runtime)
+			implementation(compose.ui)
 			implementation(libs.androidx.lifecycle.runtimeCompose)
+			implementation(libs.androidx.lifecycle.viewmodelCompose)
 			implementation(libs.compose.material3)
-			implementation(libs.ktor.client.core)
-			implementation(libs.ktor.client.contentNegotiation)
-			implementation(libs.ktor.serialization.kotlinxJson)
 			implementation(libs.kotlinx.collections.immutable)
 			implementation(libs.kotlinx.datetime)
-			implementation(libs.napier)
+			implementation(libs.ktor.client.contentNegotiation)
+			implementation(libs.ktor.client.core)
+			implementation(libs.ktor.serialization.kotlinxJson)
 			implementation(libs.multiplatform.settings)
 			implementation(libs.multiplatform.settings.noarg)
+			implementation(libs.napier)
 		}
 		jvmMain.dependencies {
 			implementation(compose.desktop.currentOs)
@@ -77,11 +77,11 @@ kotlin {
 			implementation(libs.ktor.client.darwin)
 		}
 		commonTest.dependencies {
-			implementation(libs.kotlin.test)
-			implementation(libs.ktor.client.mock)
-			implementation(libs.kotlinx.coroutines.test)
 			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
 			implementation(compose.uiTest)
+			implementation(libs.kotlin.test)
+			implementation(libs.kotlinx.coroutines.test)
+			implementation(libs.ktor.client.mock)
 		}
 	}
 }
