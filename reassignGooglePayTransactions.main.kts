@@ -4,6 +4,7 @@
 @file:DependsOn("io.ktor:ktor-client-content-negotiation-jvm:3.3.0")
 @file:DependsOn("io.ktor:ktor-serialization-kotlinx-json-jvm:3.3.0")
 @file:DependsOn("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.9.0")
+@file:Suppress("PropertyName")
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -20,16 +21,10 @@ import io.ktor.http.isSuccess
 import java.io.File
 import kotlin.system.exitProcess
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
 
 // Cannot be const, not allowed in scripts top level for some reason
 private val TARGET_IBAN = "DE96120300009005290904"
@@ -39,6 +34,78 @@ private val DEFAULT_GOOGLE_PAY_ACCOUNT_ID = "35"
 val json = Json {
 	ignoreUnknownKeys = true
 }
+
+@Serializable
+data class AutocompleteAccount(
+	val id: String,
+	val name: String,
+)
+
+@Serializable
+data class AccountData(
+	val id: String,
+)
+
+@Serializable
+data class ApiSingleResponse<T>(
+	val data: T? = null,
+)
+
+@Serializable
+data class ApiListResponse<T>(
+	val data: List<T> = emptyList(),
+	val meta: ResponseMeta? = null,
+)
+
+@Serializable
+data class ResponseMeta(
+	val pagination: Pagination? = null,
+)
+
+@Serializable
+data class Pagination(
+	val total_pages: Int? = null,
+)
+
+@Serializable
+data class TransactionJournal(
+	val id: String,
+	val attributes: TransactionJournalAttributes? = null,
+)
+
+@Serializable
+data class TransactionJournalAttributes(
+	val transactions: List<TransactionSplit> = emptyList(),
+)
+
+@Serializable
+data class TransactionSplit(
+	val destination_id: String? = null,
+	val sepa_ct_id: String? = null,
+	val transaction_journal_id: String? = null,
+	val description: String? = null,
+	val notes: String? = null,
+)
+
+@Serializable
+data class CreateAccountRequest(
+	val name: String,
+	val type: String,
+)
+
+@Serializable
+data class UpdateTransactionRequest(
+	val apply_rules: Boolean,
+	val fire_webhooks: Boolean,
+	val transactions: List<UpdateTransactionSplit>,
+)
+
+@Serializable
+data class UpdateTransactionSplit(
+	val destination_id: String,
+	val description: String,
+	val notes: String,
+)
 
 data class JournalMatch(
 	val journalId: String,
@@ -219,13 +286,8 @@ runBlocking {
 			parameter("types", "expense")
 		}
 		if (lookupResponse.status.isSuccess()) {
-			val payload = json.parseToJsonElement(lookupResponse.bodyAsText())
-			val existing = payload.jsonArray
-				.firstOrNull { it.jsonObject["name"]?.jsonPrimitive?.content == merchant }
-				?.jsonObject
-				?.get("id")
-				?.jsonPrimitive
-				?.content
+			val payload = json.decodeFromString<List<AutocompleteAccount>>(lookupResponse.bodyAsText())
+			val existing = payload.firstOrNull { it.name == merchant }?.id
 			if (existing != null) {
 				merchantAccountIds[merchant] = existing
 				merchantAccountsReused += 1
@@ -240,15 +302,15 @@ runBlocking {
 		} else {
 			logInfo("Creating expense account '$merchant'.")
 		}
-		val createBody = buildJsonObject {
-			put("name", merchant)
-			put("type", "expense")
-		}
+		val createBody = CreateAccountRequest(
+			name = merchant,
+			type = "expense",
+		)
 		val createResponse = client.post("$baseUrl/api/v1/accounts") {
 			header("Authorization", "Bearer $accessToken")
 			setBody(
 				TextContent(
-					json.encodeToString(JsonObject.serializer(), createBody),
+					json.encodeToString(createBody),
 					ContentType.Application.Json,
 				),
 			)
@@ -261,12 +323,8 @@ runBlocking {
 			}
 			continue
 		}
-		val created = json.parseToJsonElement(createText).jsonObject
-		val id = created["data"]
-			?.jsonObject
-			?.get("id")
-			?.jsonPrimitive
-			?.content
+		val created = json.decodeFromString<ApiSingleResponse<AccountData>>(createText)
+		val id = created.data?.id
 		if (id == null) {
 			logError("Account creation response missing ID for '$merchant'.")
 			continue
@@ -295,26 +353,22 @@ runBlocking {
 				journalsFailed += 1
 				continue
 			}
-			val detail = json.parseToJsonElement(detailText).jsonObject
-			val split = detail["data"]
-				?.jsonObject
-				?.get("attributes")
-				?.jsonObject
-				?.get("transactions")
-				?.jsonArray
+			val detail = json.decodeFromString<ApiSingleResponse<TransactionJournal>>(detailText)
+			val split = detail.data
+				?.attributes
+				?.transactions
 				?.singleOrNull()
-				?.jsonObject
 			if (split == null) {
 				logError("Journal ${match.journalId} does not contain a transaction split.")
 				journalsFailed += 1
 				continue
 			}
-			val updatedNotes = appendProvenance(split["notes"]?.jsonPrimitive?.contentOrNull)
-			val updateSplit = buildJsonObject {
-				put("destination_id", destinationAccountId)
-				put("description", merchant)
-				put("notes", updatedNotes)
-			}
+			val updatedNotes = appendProvenance(split.notes)
+			val updateSplit = UpdateTransactionSplit(
+				destination_id = destinationAccountId,
+				description = merchant,
+				notes = updatedNotes,
+			)
 			if (dryRun) {
 				journalsPlanned += 1
 				logInfo("Dry run: would update journal ${match.journalId} for merchant '$merchant'.")
@@ -322,16 +376,16 @@ runBlocking {
 			} else {
 				logInfo("Updating journal ${match.journalId} for merchant '$merchant'.")
 			}
-			val requestBody = buildJsonObject {
-				put("apply_rules", false)
-				put("fire_webhooks", false)
-				put("transactions", JsonArray(listOf(updateSplit)))
-			}
+			val requestBody = UpdateTransactionRequest(
+				apply_rules = false,
+				fire_webhooks = false,
+				transactions = listOf(updateSplit),
+			)
 			val updateResponse = client.put("$baseUrl/api/v1/transactions/${match.journalId}") {
 				header("Authorization", "Bearer $accessToken")
 				setBody(
 					TextContent(
-						json.encodeToString(JsonObject.serializer(), requestBody),
+						json.encodeToString(requestBody),
 						ContentType.Application.Json,
 					),
 				)
@@ -380,32 +434,22 @@ private suspend fun matchJournalEntries() {
 			}
 			break
 		}
-		val root = json.parseToJsonElement(bodyText).jsonObject
-		val data = root["data"]?.jsonArray ?: JsonArray(emptyList())
-		for (entry in data) {
-			val journal = entry.jsonObject
-			val journalId = journal["id"]?.jsonPrimitive?.content ?: continue
-			val split = journal["attributes"]
-				?.jsonObject
-				?.get("transactions")
-				?.jsonArray
-				?.singleOrNull()
-				?.jsonObject ?: continue
-			if (split["destination_id"]?.jsonPrimitive?.content != googlePayAccountId) {
+		val root = json.decodeFromString<ApiListResponse<TransactionJournal>>(bodyText)
+		for (journal in root.data) {
+			val split = journal.attributes
+				?.transactions
+				?.singleOrNull() ?: continue
+			if (split.destination_id != googlePayAccountId) {
 				continue
 			}
-			val e2e = split["sepa_ct_id"]?.jsonPrimitive?.content ?: continue
+			val e2e = split.sepa_ct_id ?: continue
 			if (!e2eToMerchant.containsKey(e2e)) {
 				continue
 			}
-			val splitId = split["transaction_journal_id"]?.jsonPrimitive?.content ?: journalId
-			matchedByE2e.getOrPut(e2e) { mutableListOf() }.add(JournalMatch(journalId, splitId))
+			val splitId = split.transaction_journal_id ?: journal.id
+			matchedByE2e.getOrPut(e2e) { mutableListOf() }.add(JournalMatch(journal.id, splitId))
 		}
-		val pagination = root["meta"]
-			?.jsonObject
-			?.get("pagination")
-			?.jsonObject
-		totalPages = pagination?.get("total_pages")?.jsonPrimitive?.int
+		totalPages = root.meta?.pagination?.total_pages
 		logInfo("Processed page '$page' of total $totalPages")
 		page += 1
 	}
