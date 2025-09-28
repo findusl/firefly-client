@@ -309,6 +309,10 @@ runBlocking {
 				journalsFailed += 1
 				continue
 			}
+			if (split["destination_id"]?.jsonPrimitive?.content == destinationAccountId) {
+				logInfo("Journal ${match.journalId} already uses correct destination account $destinationAccountId.")
+				continue
+			}
 			val updatedNotes = appendProvenance(split["notes"]?.jsonPrimitive?.contentOrNull)
 			val updateSplit = buildJsonObject {
 				put("destination_id", destinationAccountId)
