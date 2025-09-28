@@ -11,5 +11,20 @@ Accept: application/vnd.api+json
 Authorization: Bearer {{access-token}}
 Content-Type: application/json
 
-###
+### Update transaction description/notes/destination
+@transaction-id=10
+PUT {{base-url}}/api/v1/transactions/{{transaction-id}}
+Accept: application/vnd.api+json
+Authorization: Bearer {{access-token}}
+Content-Type: application/json
+
+{
+  "transactions": [
+    {
+      "destination_id": "3",
+      "description": "Partial update test partial fields",
+      "notes": "Note from partial update"
+    }
+  ]
+}
 

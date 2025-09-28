@@ -23,20 +23,18 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonObjectBuilder
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.int
-import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
-val TARGET_IBAN = "DE96120300009005290904"
-val PROVENANCE_NOTE = "Paid via Google Pay (IBAN DE96120300009005290904)."
-val DEFAULT_GOOGLE_PAY_ACCOUNT_ID = "35"
+// Cannot be const, not allowed in scripts top level for some reason
+private val TARGET_IBAN = "DE96120300009005290904"
+private val PROVENANCE_NOTE = "Paid via Google Pay (IBAN DE96120300009005290904)."
+private val DEFAULT_GOOGLE_PAY_ACCOUNT_ID = "35"
 
 val json = Json {
 	ignoreUnknownKeys = true
@@ -183,32 +181,12 @@ fun parseCsvLine(line: String): List<String> {
 	return result
 }
 
-fun JsonObjectBuilder.copyString(source: JsonObject, key: String) {
-	source[key]?.jsonPrimitive?.contentOrNull?.let { put(key, it) }
-}
-
-fun JsonObjectBuilder.copyBoolean(source: JsonObject, key: String) {
-	source[key]?.jsonPrimitive?.booleanOrNull?.let { put(key, it) }
-}
-
-fun JsonObjectBuilder.copyInt(source: JsonObject, key: String) {
-	source[key]?.jsonPrimitive?.intOrNull?.let { put(key, it) }
-}
-
-fun JsonObjectBuilder.copyArray(source: JsonObject, key: String) {
-	val element = source[key]
-	if (element is JsonArray) {
-		put(key, JsonArray(element.map { it }))
-	}
-}
-
 fun appendProvenance(existing: String?): String =
 	if (existing.isNullOrBlank()) {
 		PROVENANCE_NOTE
 	} else {
 		"$existing\n\n$PROVENANCE_NOTE"
 	}
-
 val (e2eToMerchant, csvRowsConsidered) = loadCsv(csvFile)
 logInfo("CSV rows considered after IBAN filter: $csvRowsConsidered")
 if (e2eToMerchant.isEmpty()) {
@@ -332,44 +310,7 @@ runBlocking {
 				continue
 			}
 			val updatedNotes = appendProvenance(split["notes"]?.jsonPrimitive?.contentOrNull)
-			val splitId = split["transaction_journal_id"]?.jsonPrimitive?.content ?: match.splitId
 			val updateSplit = buildJsonObject {
-				put("transaction_journal_id", splitId)
-				put("id", splitId)
-				put("type", split["type"]?.jsonPrimitive?.content ?: "withdrawal")
-				put("date", split["date"]?.jsonPrimitive?.content ?: error("Split missing date"))
-				put("amount", split["amount"]?.jsonPrimitive?.content ?: error("Split missing amount"))
-				copyInt(split, "order")
-				copyString(split, "currency_id")
-				copyString(split, "currency_code")
-				copyString(split, "foreign_amount")
-				copyString(split, "foreign_currency_id")
-				copyString(split, "foreign_currency_code")
-				copyString(split, "budget_id")
-				copyString(split, "category_id")
-				copyString(split, "bill_id")
-				copyString(split, "source_id")
-				copyString(split, "source_name")
-				copyString(split, "source_iban")
-				copyBoolean(split, "reconciled")
-				copyArray(split, "tags")
-				copyString(split, "internal_reference")
-				copyString(split, "external_id")
-				copyString(split, "external_url")
-				copyString(split, "sepa_cc")
-				copyString(split, "sepa_ct_op")
-				copyString(split, "sepa_ct_id")
-				copyString(split, "sepa_db")
-				copyString(split, "sepa_country")
-				copyString(split, "sepa_ep")
-				copyString(split, "sepa_ci")
-				copyString(split, "sepa_batch_id")
-				copyString(split, "interest_date")
-				copyString(split, "book_date")
-				copyString(split, "process_date")
-				copyString(split, "due_date")
-				copyString(split, "payment_date")
-				copyString(split, "invoice_date")
 				put("destination_id", destinationAccountId)
 				put("description", merchant)
 				put("notes", updatedNotes)
