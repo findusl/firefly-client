@@ -1,0 +1,9 @@
+{
+  "transactions": [
+    {
+      "destination_id": "3",
+      "description": "Partial update test partial fields",
+      "notes": "Note from partial update"
+    }
+  ]
+}
