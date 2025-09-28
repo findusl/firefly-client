@@ -227,53 +227,7 @@ var journalsFailed = 0
 var journalsPlanned = 0
 
 runBlocking {
-	var page = 1
-	var totalPages: Int? = null
-	while (totalPages == null || page <= totalPages) {
-		logInfo("Page '$page' of total $totalPages")
-		val response = client.get("$baseUrl/api/v1/accounts/$DEFAULT_GOOGLE_PAY_ACCOUNT_ID/transactions") {
-			header("Authorization", "Bearer $accessToken")
-			parameter("page", page)
-		}
-		val bodyText = response.bodyAsText()
-		if (!response.status.isSuccess()) {
-			logError("Failed to list transactions (page $page): HTTP ${response.status.value} ${response.status.description}")
-			if (bodyText.isNotBlank()) {
-				logError(bodyText)
-			}
-			break
-		}
-		val root = json.parseToJsonElement(bodyText).jsonObject
-		val data = root["data"]?.jsonArray ?: JsonArray(emptyList())
-		for (entry in data) {
-			val journal = entry.jsonObject
-			val journalId = journal["id"]?.jsonPrimitive?.content ?: continue
-			val split = journal["attributes"]
-				?.jsonObject
-				?.get("transactions")
-				?.jsonArray
-				?.singleOrNull()
-				?.jsonObject ?: continue
-			if (split["destination_id"]?.jsonPrimitive?.content != googlePayAccountId) {
-				continue
-			}
-			val e2e = split["sepa_ct_id"]?.jsonPrimitive?.content ?: continue
-			if (!e2eToMerchant.containsKey(e2e)) {
-				continue
-			}
-			val splitId = split["transaction_journal_id"]?.jsonPrimitive?.content ?: journalId
-			matchedByE2e.getOrPut(e2e) { mutableListOf() }.add(JournalMatch(journalId, splitId))
-		}
-		val pagination = root["meta"]
-			?.jsonObject
-			?.get("pagination")
-			?.jsonObject
-		totalPages = pagination?.get("total_pages")?.jsonPrimitive?.int
-		if (totalPages == null || page >= totalPages) {
-			break
-		}
-		page += 1
-	}
+	matchJournalEntries()
 	val unmatched = e2eToMerchant.keys.filterNot(matchedByE2e::containsKey)
 	for (e2e in unmatched) {
 		logWarn("No matching Firefly III journal found for E2E '$e2e'.")
@@ -467,4 +421,51 @@ logInfo(
 )
 if (dryRun) {
 	logInfo("Dry run complete. Re-run with -f to apply these changes.")
+}
+
+private suspend fun matchJournalEntries() {
+	var page = 1
+	var totalPages: Int? = null
+	while (totalPages == null || page <= totalPages) {
+		val response = client.get("$baseUrl/api/v1/accounts/$DEFAULT_GOOGLE_PAY_ACCOUNT_ID/transactions") {
+			header("Authorization", "Bearer $accessToken")
+			parameter("page", page)
+		}
+		val bodyText = response.bodyAsText()
+		if (!response.status.isSuccess()) {
+			logError("Failed to list transactions (page $page): HTTP ${response.status.value} ${response.status.description}")
+			if (bodyText.isNotBlank()) {
+				logError(bodyText)
+			}
+			break
+		}
+		val root = json.parseToJsonElement(bodyText).jsonObject
+		val data = root["data"]?.jsonArray ?: JsonArray(emptyList())
+		for (entry in data) {
+			val journal = entry.jsonObject
+			val journalId = journal["id"]?.jsonPrimitive?.content ?: continue
+			val split = journal["attributes"]
+				?.jsonObject
+				?.get("transactions")
+				?.jsonArray
+				?.singleOrNull()
+				?.jsonObject ?: continue
+			if (split["destination_id"]?.jsonPrimitive?.content != googlePayAccountId) {
+				continue
+			}
+			val e2e = split["sepa_ct_id"]?.jsonPrimitive?.content ?: continue
+			if (!e2eToMerchant.containsKey(e2e)) {
+				continue
+			}
+			val splitId = split["transaction_journal_id"]?.jsonPrimitive?.content ?: journalId
+			matchedByE2e.getOrPut(e2e) { mutableListOf() }.add(JournalMatch(journalId, splitId))
+		}
+		val pagination = root["meta"]
+			?.jsonObject
+			?.get("pagination")
+			?.jsonObject
+		totalPages = pagination?.get("total_pages")?.jsonPrimitive?.int
+		logInfo("Processed page '$page' of total $totalPages")
+		page += 1
+	}
 }
