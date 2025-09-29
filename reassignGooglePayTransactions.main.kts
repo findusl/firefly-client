@@ -45,12 +45,6 @@ data class JournalMatch(
 	val splitId: String,
 )
 
-fun logInfo(message: String) = println("INFO: $message")
-
-fun logWarn(message: String) = println("WARN: $message")
-
-fun logError(message: String) = println("ERROR: $message")
-
 fun usage(): Nothing {
 	System.err.println("Usage: reassignGooglePayTransactions.main.kts <csv-file> [-f] [--source-account-id=<id>]")
 	exitProcess(1)
@@ -86,7 +80,252 @@ if (!csvFile.isFile) {
 	exitProcess(1)
 }
 
-fun loadCsv(file: File): Pair<Map<String, String>, Int> {
+val client = HttpClient(CIO) {
+	engine {
+		requestTimeout = 60_000
+	}
+}
+
+// Statistic variables
+var csvRowsConsidered = 0
+var e2eNotFoundCount = 0
+var merchantAccountsCreated = 0
+var merchantAccountsReused = 0
+var journalsUpdated = 0
+var journalsFailed = 0
+var journalsPlanned = 0
+
+runBlocking {
+	val e2eToMerchant = loadCsv(csvFile)
+	logInfo("CSV rows considered after IBAN filter: $csvRowsConsidered")
+	if (e2eToMerchant.isEmpty()) {
+		logWarn("No CSV rows matched the target IBAN. Nothing to process.")
+		exitProcess(0)
+	}
+	val merchantAccountIds = mutableMapOf<String, String>()
+	val matchedE2eToJournalEntries = mutableMapOf<String, MutableList<JournalMatch>>()
+	var page = 1
+	var totalPages: Int? = null
+	while (totalPages == null || page <= totalPages) {
+		val response = client.get("$baseUrl/api/v1/accounts/$DEFAULT_GOOGLE_PAY_ACCOUNT_ID/transactions") {
+			header("Authorization", "Bearer $accessToken")
+			parameter("page", page)
+		}
+		val bodyText = response.bodyAsText()
+		if (!response.status.isSuccess()) {
+			logError("Failed to list transactions (page $page): HTTP ${response.status.value} ${response.status.description}")
+			if (bodyText.isNotBlank()) {
+				logError(bodyText)
+			}
+			break
+		}
+		val root = json.parseToJsonElement(bodyText).jsonObject
+		val data = root["data"]?.jsonArray ?: JsonArray(emptyList())
+		for (entry in data) {
+			val journal = entry.jsonObject
+			val journalId = journal["id"]?.jsonPrimitive?.content ?: continue
+			val split = journal["attributes"]
+				?.jsonObject
+				?.get("transactions")
+				?.jsonArray
+				?.singleOrNull()
+				?.jsonObject ?: continue
+			if (split["destination_id"]?.jsonPrimitive?.content != googlePayAccountId) {
+				continue
+			}
+			val e2e = split["sepa_ct_id"]?.jsonPrimitive?.content ?: continue
+			if (!e2eToMerchant.containsKey(e2e)) {
+				continue
+			}
+			val splitId = split["transaction_journal_id"]?.jsonPrimitive?.content ?: journalId
+			matchedE2eToJournalEntries.getOrPut(e2e) { mutableListOf() }.add(JournalMatch(journalId, splitId))
+		}
+		val pagination = root["meta"]
+			?.jsonObject
+			?.get("pagination")
+			?.jsonObject
+		totalPages = pagination?.get("total_pages")?.jsonPrimitive?.int
+		logInfo("Processed page '$page' of total $totalPages")
+		page += 1
+	}
+	val unmatched = e2eToMerchant.keys.filterNot(matchedE2eToJournalEntries::containsKey)
+	for (e2e in unmatched) {
+		logWarn("No matching Firefly III journal found for E2E '$e2e'.")
+		e2eNotFoundCount += 1
+	}
+	val merchantsNeedingAccounts = matchedE2eToJournalEntries.keys.map { e2eToMerchant[it]!! }.toSet()
+	for (merchant in merchantsNeedingAccounts) {
+		val id = createMerchantAccount(merchant) ?: continue
+		merchantAccountIds[merchant] = id
+		logInfo("Created expense account '$merchant' (id=$id).")
+	}
+	for ((e2e, matches) in matchedE2eToJournalEntries) {
+		val merchant = e2eToMerchant[e2e] ?: continue
+		val destinationAccountId = merchantAccountIds[merchant] ?: run {
+			logError("No expense account ID available for merchant '$merchant'. Skipping journals for E2E '$e2e'.")
+			continue
+		}
+		for (match in matches) {
+			updateTransaction(match, e2e, destinationAccountId, merchant)
+		}
+	}
+}
+
+client.close()
+logInfo(
+	"Summary: CSV rows considered=$csvRowsConsidered, " +
+		"E2E not found=$e2eNotFoundCount, " +
+		"merchant accounts created=$merchantAccountsCreated, " +
+		"merchant accounts reused=$merchantAccountsReused, " +
+		"journals updated=$journalsUpdated, " +
+		"journals planned (dry-run)=$journalsPlanned, journals failed=$journalsFailed.",
+)
+if (dryRun) {
+	logInfo("Dry run complete. Re-run with -f to apply these changes.")
+}
+
+suspend fun updateTransaction(match: JournalMatch, e2e: String, destinationAccountId: String, merchant: String) {
+	logInfo("Getting ${match.journalId} for $e2e")
+	val detailResponse = client.get("$baseUrl/api/v1/transactions/${match.journalId}") {
+		header("Authorization", "Bearer $accessToken")
+	}
+	val detailText = detailResponse.bodyAsText()
+	if (!detailResponse.status.isSuccess()) {
+		logError("Failed to fetch journal ${match.journalId}: HTTP ${detailResponse.status.value} ${detailResponse.status.description}")
+		if (detailText.isNotBlank()) {
+			logError(detailText)
+		}
+		journalsFailed += 1
+		return
+	}
+	val detail = json.parseToJsonElement(detailText).jsonObject
+	val split = detail["data"]
+		?.jsonObject
+		?.get("attributes")
+		?.jsonObject
+		?.get("transactions")
+		?.jsonArray
+		?.singleOrNull()
+		?.jsonObject
+	if (split == null) {
+		logError("Journal ${match.journalId} does not contain a transaction split.")
+		journalsFailed += 1
+		return
+	}
+	if (split["destination_id"]?.jsonPrimitive?.content == destinationAccountId) {
+		logInfo("Journal ${match.journalId} already uses correct destination account $destinationAccountId.")
+		return
+	}
+	val updatedNotes = appendProvenance(split["notes"]?.jsonPrimitive?.contentOrNull)
+	val updateSplit = buildJsonObject {
+		put("destination_id", destinationAccountId)
+		put("description", merchant)
+		put("notes", updatedNotes)
+	}
+	if (dryRun) {
+		journalsPlanned += 1
+		logInfo("Dry run: would update journal ${match.journalId} for merchant '$merchant'.")
+		return
+	} else {
+		logInfo("Updating journal ${match.journalId} for merchant '$merchant'.")
+	}
+	val requestBody = buildJsonObject {
+		put("apply_rules", false)
+		put("fire_webhooks", false)
+		put("transactions", JsonArray(listOf(updateSplit)))
+	}
+	val updateResponse = client.put("$baseUrl/api/v1/transactions/${match.journalId}") {
+		header("Authorization", "Bearer $accessToken")
+		setBody(
+			TextContent(
+				json.encodeToString(JsonObject.serializer(), requestBody),
+				ContentType.Application.Json,
+			),
+		)
+	}
+	val updateText = updateResponse.bodyAsText()
+	if (updateResponse.status.isSuccess()) {
+		journalsUpdated += 1
+		logInfo("Updated journal ${match.journalId} for merchant '$merchant'.")
+	} else {
+		journalsFailed += 1
+		logError("Failed to update journal ${match.journalId}: HTTP ${updateResponse.status.value} ${updateResponse.status.description}")
+		if (updateText.isNotBlank()) {
+			logError(updateText)
+		}
+	}
+}
+
+suspend fun createMerchantAccount(merchant: String): String? {
+	val lookupResponse = client.get("$baseUrl/api/v1/autocomplete/accounts") {
+		header("Authorization", "Bearer $accessToken")
+		parameter("query", merchant)
+		parameter("types", "Expense account")
+	}
+	if (lookupResponse.status.isSuccess()) {
+		val payload = json.parseToJsonElement(lookupResponse.bodyAsText())
+		val existing = payload.jsonArray
+			.firstOrNull { it.jsonObject["name"]?.jsonPrimitive?.content == merchant }
+			?.jsonObject
+			?.get("id")
+			?.jsonPrimitive
+			?.content
+		if (existing != null) {
+			logWarn("Merchant account already exists for '$merchant' (id=$existing); reusing.")
+			merchantAccountsReused += 1
+			return existing
+		}
+	}
+	if (dryRun) {
+		logInfo("Dry run: would create expense account '$merchant'.")
+		return "(dry-run-new-account)"
+	} else {
+		logInfo("Creating expense account '$merchant'.")
+	}
+	val createBody = buildJsonObject {
+		put("name", merchant)
+		put("type", "expense")
+	}
+	val createResponse = client.post("$baseUrl/api/v1/accounts") {
+		header("Authorization", "Bearer $accessToken")
+		setBody(
+			TextContent(
+				json.encodeToString(JsonObject.serializer(), createBody),
+				ContentType.Application.Json,
+			),
+		)
+	}
+	val createText = createResponse.bodyAsText()
+	if (!createResponse.status.isSuccess()) {
+		logError("Failed to create expense account for '$merchant': HTTP ${createResponse.status.value} ${createResponse.status.description}")
+		if (createText.isNotBlank()) {
+			logError(createText)
+		}
+		return null
+	}
+	val created = json.parseToJsonElement(createText).jsonObject
+	val id = created["data"]
+		?.jsonObject
+		?.get("id")
+		?.jsonPrimitive
+		?.content
+	if (id == null) {
+		logError("Account creation response missing ID for '$merchant'.")
+		return null
+	}
+	merchantAccountsCreated += 1
+	return id
+}
+
+fun appendProvenance(existing: String?): String =
+	if (existing.isNullOrBlank()) {
+		PROVENANCE_NOTE
+	} else {
+		"$existing\n\n$PROVENANCE_NOTE"
+	}
+
+
+fun loadCsv(file: File): Map<String, String> {
 	val lines = file.readLines().filter { it.isNotBlank() }
 	if (lines.isEmpty()) {
 		logError("CSV file is empty after removing blank lines.")
@@ -102,7 +341,6 @@ fun loadCsv(file: File): Pair<Map<String, String>, Int> {
 	}
 	val mapping = mutableMapOf<String, String>()
 	val conflicts = mutableSetOf<String>()
-	var considered = 0
 	for (line in lines.drop(1)) {
 		val columns = parseCsvLine(line)
 		if (columns.size <= maxOf(ibanIndex, e2eIndex, merchantIndex)) {
@@ -112,7 +350,7 @@ fun loadCsv(file: File): Pair<Map<String, String>, Int> {
 		if (iban != TARGET_IBAN) {
 			continue
 		}
-		considered += 1
+		csvRowsConsidered += 1
 		val e2e = columns[e2eIndex]
 		val merchant = columns[merchantIndex]
 		if (e2e.isBlank()) {
@@ -128,7 +366,7 @@ fun loadCsv(file: File): Pair<Map<String, String>, Int> {
 			}
 		}
 	}
-	return mapping to considered
+	return mapping
 }
 
 fun parseCsvLine(line: String): List<String> {
@@ -181,236 +419,8 @@ fun parseCsvLine(line: String): List<String> {
 	return result
 }
 
-fun appendProvenance(existing: String?): String =
-	if (existing.isNullOrBlank()) {
-		PROVENANCE_NOTE
-	} else {
-		"$existing\n\n$PROVENANCE_NOTE"
-	}
-val (e2eToMerchant, csvRowsConsidered) = loadCsv(csvFile)
-logInfo("CSV rows considered after IBAN filter: $csvRowsConsidered")
-if (e2eToMerchant.isEmpty()) {
-	logWarn("No CSV rows matched the target IBAN. Nothing to process.")
-	exitProcess(0)
-}
+fun logInfo(message: String) = println("INFO: $message")
 
-val client = HttpClient(CIO)
-val matchedByE2e = mutableMapOf<String, MutableList<JournalMatch>>()
-val merchantAccountIds = mutableMapOf<String, String>()
-var e2eNotFoundCount = 0
-var merchantAccountsCreated = 0
-var merchantAccountsReused = 0
-var journalsUpdated = 0
-var journalsFailed = 0
-var journalsPlanned = 0
+fun logWarn(message: String) = println("WARN: $message")
 
-runBlocking {
-	matchJournalEntries()
-	val unmatched = e2eToMerchant.keys.filterNot(matchedByE2e::containsKey)
-	for (e2e in unmatched) {
-		logWarn("No matching Firefly III journal found for E2E '$e2e'.")
-		e2eNotFoundCount += 1
-	}
-	val merchantsNeedingAccounts = matchedByE2e.keys.map { e2eToMerchant[it]!! }.toSet()
-	for (merchant in merchantsNeedingAccounts) {
-		val lookupResponse = client.get("$baseUrl/api/v1/autocomplete/accounts") {
-			header("Authorization", "Bearer $accessToken")
-			parameter("query", merchant)
-			parameter("types", "expense")
-		}
-		if (lookupResponse.status.isSuccess()) {
-			val payload = json.parseToJsonElement(lookupResponse.bodyAsText())
-			val existing = payload.jsonArray
-				.firstOrNull { it.jsonObject["name"]?.jsonPrimitive?.content == merchant }
-				?.jsonObject
-				?.get("id")
-				?.jsonPrimitive
-				?.content
-			if (existing != null) {
-				merchantAccountIds[merchant] = existing
-				merchantAccountsReused += 1
-				logWarn("Merchant account already exists for '$merchant' (id=$existing); reusing.")
-				continue
-			}
-		}
-		if (dryRun) {
-			logInfo("Dry run: would create expense account '$merchant'.")
-			merchantAccountIds[merchant] = "(dry-run-new-account)"
-			continue
-		} else {
-			logInfo("Creating expense account '$merchant'.")
-		}
-		val createBody = buildJsonObject {
-			put("name", merchant)
-			put("type", "expense")
-		}
-		val createResponse = client.post("$baseUrl/api/v1/accounts") {
-			header("Authorization", "Bearer $accessToken")
-			setBody(
-				TextContent(
-					json.encodeToString(JsonObject.serializer(), createBody),
-					ContentType.Application.Json,
-				),
-			)
-		}
-		val createText = createResponse.bodyAsText()
-		if (!createResponse.status.isSuccess()) {
-			logError("Failed to create expense account for '$merchant': HTTP ${createResponse.status.value} ${createResponse.status.description}")
-			if (createText.isNotBlank()) {
-				logError(createText)
-			}
-			continue
-		}
-		val created = json.parseToJsonElement(createText).jsonObject
-		val id = created["data"]
-			?.jsonObject
-			?.get("id")
-			?.jsonPrimitive
-			?.content
-		if (id == null) {
-			logError("Account creation response missing ID for '$merchant'.")
-			continue
-		}
-		merchantAccountIds[merchant] = id
-		merchantAccountsCreated += 1
-		logInfo("Created expense account '$merchant' (id=$id).")
-	}
-	for ((e2e, matches) in matchedByE2e) {
-		val merchant = e2eToMerchant[e2e] ?: continue
-		val destinationAccountId = merchantAccountIds[merchant] ?: run {
-			logError("No expense account ID available for merchant '$merchant'. Skipping journals for E2E '$e2e'.")
-			continue
-		}
-		for (match in matches) {
-			logInfo("Getting ${match.journalId} for $e2e")
-			val detailResponse = client.get("$baseUrl/api/v1/transactions/${match.journalId}") {
-				header("Authorization", "Bearer $accessToken")
-			}
-			val detailText = detailResponse.bodyAsText()
-			if (!detailResponse.status.isSuccess()) {
-				logError("Failed to fetch journal ${match.journalId}: HTTP ${detailResponse.status.value} ${detailResponse.status.description}")
-				if (detailText.isNotBlank()) {
-					logError(detailText)
-				}
-				journalsFailed += 1
-				continue
-			}
-			val detail = json.parseToJsonElement(detailText).jsonObject
-			val split = detail["data"]
-				?.jsonObject
-				?.get("attributes")
-				?.jsonObject
-				?.get("transactions")
-				?.jsonArray
-				?.singleOrNull()
-				?.jsonObject
-			if (split == null) {
-				logError("Journal ${match.journalId} does not contain a transaction split.")
-				journalsFailed += 1
-				continue
-			}
-			if (split["destination_id"]?.jsonPrimitive?.content == destinationAccountId) {
-				logInfo("Journal ${match.journalId} already uses correct destination account $destinationAccountId.")
-				continue
-			}
-			val updatedNotes = appendProvenance(split["notes"]?.jsonPrimitive?.contentOrNull)
-			val updateSplit = buildJsonObject {
-				put("destination_id", destinationAccountId)
-				put("description", merchant)
-				put("notes", updatedNotes)
-			}
-			if (dryRun) {
-				journalsPlanned += 1
-				logInfo("Dry run: would update journal ${match.journalId} for merchant '$merchant'.")
-				continue
-			} else {
-				logInfo("Updating journal ${match.journalId} for merchant '$merchant'.")
-			}
-			val requestBody = buildJsonObject {
-				put("apply_rules", false)
-				put("fire_webhooks", false)
-				put("transactions", JsonArray(listOf(updateSplit)))
-			}
-			val updateResponse = client.put("$baseUrl/api/v1/transactions/${match.journalId}") {
-				header("Authorization", "Bearer $accessToken")
-				setBody(
-					TextContent(
-						json.encodeToString(JsonObject.serializer(), requestBody),
-						ContentType.Application.Json,
-					),
-				)
-			}
-			val updateText = updateResponse.bodyAsText()
-			if (updateResponse.status.isSuccess()) {
-				journalsUpdated += 1
-				logInfo("Updated journal ${match.journalId} for merchant '$merchant'.")
-			} else {
-				journalsFailed += 1
-				logError("Failed to update journal ${match.journalId}: HTTP ${updateResponse.status.value} ${updateResponse.status.description}")
-				if (updateText.isNotBlank()) {
-					logError(updateText)
-				}
-			}
-		}
-	}
-}
-
-client.close()
-logInfo(
-	"Summary: CSV rows considered=$csvRowsConsidered, " +
-		"E2E not found=$e2eNotFoundCount, " +
-		"merchant accounts created=$merchantAccountsCreated, " +
-		"merchant accounts reused=$merchantAccountsReused, " +
-		"journals updated=$journalsUpdated, " +
-		"journals planned (dry-run)=$journalsPlanned, journals failed=$journalsFailed.",
-)
-if (dryRun) {
-	logInfo("Dry run complete. Re-run with -f to apply these changes.")
-}
-
-private suspend fun matchJournalEntries() {
-	var page = 1
-	var totalPages: Int? = null
-	while (totalPages == null || page <= totalPages) {
-		val response = client.get("$baseUrl/api/v1/accounts/$DEFAULT_GOOGLE_PAY_ACCOUNT_ID/transactions") {
-			header("Authorization", "Bearer $accessToken")
-			parameter("page", page)
-		}
-		val bodyText = response.bodyAsText()
-		if (!response.status.isSuccess()) {
-			logError("Failed to list transactions (page $page): HTTP ${response.status.value} ${response.status.description}")
-			if (bodyText.isNotBlank()) {
-				logError(bodyText)
-			}
-			break
-		}
-		val root = json.parseToJsonElement(bodyText).jsonObject
-		val data = root["data"]?.jsonArray ?: JsonArray(emptyList())
-		for (entry in data) {
-			val journal = entry.jsonObject
-			val journalId = journal["id"]?.jsonPrimitive?.content ?: continue
-			val split = journal["attributes"]
-				?.jsonObject
-				?.get("transactions")
-				?.jsonArray
-				?.singleOrNull()
-				?.jsonObject ?: continue
-			if (split["destination_id"]?.jsonPrimitive?.content != googlePayAccountId) {
-				continue
-			}
-			val e2e = split["sepa_ct_id"]?.jsonPrimitive?.content ?: continue
-			if (!e2eToMerchant.containsKey(e2e)) {
-				continue
-			}
-			val splitId = split["transaction_journal_id"]?.jsonPrimitive?.content ?: journalId
-			matchedByE2e.getOrPut(e2e) { mutableListOf() }.add(JournalMatch(journalId, splitId))
-		}
-		val pagination = root["meta"]
-			?.jsonObject
-			?.get("pagination")
-			?.jsonObject
-		totalPages = pagination?.get("total_pages")?.jsonPrimitive?.int
-		logInfo("Processed page '$page' of total $totalPages")
-		page += 1
-	}
-}
+fun logError(message: String) = println("ERROR: $message")
