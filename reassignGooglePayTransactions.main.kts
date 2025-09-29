@@ -121,6 +121,12 @@ runBlocking {
 		}
 		val root = json.parseToJsonElement(bodyText).jsonObject
 		val data = root["data"]?.jsonArray ?: JsonArray(emptyList())
+		val pagination = root["meta"]
+			?.jsonObject
+			?.get("pagination")
+			?.jsonObject
+		totalPages = pagination?.get("total_pages")?.jsonPrimitive?.int
+		logInfo("Processing page '$page' of total $totalPages")
 		for (entry in data) {
 			val journal = entry.jsonObject
 			val journalId = journal["id"]?.jsonPrimitive?.content ?: continue
@@ -146,11 +152,6 @@ runBlocking {
 			updateTransaction(match, e2e, id, merchant)
 
 		}
-		val pagination = root["meta"]
-			?.jsonObject
-			?.get("pagination")
-			?.jsonObject
-		totalPages = pagination?.get("total_pages")?.jsonPrimitive?.int
 		logInfo("Processed page '$page' of total $totalPages")
 		page += 1
 	}
