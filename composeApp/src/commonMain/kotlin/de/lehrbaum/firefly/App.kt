@@ -71,15 +71,22 @@ fun App(
 				.fillMaxSize()
 				.padding(16.dp),
 		) {
-			if (viewModel.errorMessage != null) {
+			viewModel.bannerState?.let { banner ->
+				val (containerColor, contentColor) = when (banner.type) {
+					BannerType.Success ->
+						MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+					BannerType.Error ->
+						MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+				}
 				Text(
-					viewModel.errorMessage!!,
+					banner.message,
 					modifier = Modifier
 						.fillMaxWidth()
-						.background(MaterialTheme.colorScheme.errorContainer)
+						.background(containerColor)
 						.padding(8.dp),
-					color = MaterialTheme.colorScheme.onErrorContainer,
+					color = contentColor,
 				)
+				Spacer(Modifier.size(8.dp))
 			}
 			AutocompleteTextField(field = viewModel.sourceField, label = "Source account")
 			AutocompleteTextField(field = viewModel.targetField, label = "Target account")
