@@ -134,11 +134,17 @@ runBlocking {
 				continue
 			}
 			val e2e = split["sepa_ct_id"]?.jsonPrimitive?.content ?: continue
-			if (!e2eToMerchant.containsKey(e2e)) {
-				continue
-			}
+			val merchant = e2eToMerchant[e2e] ?: continue
 			val splitId = split["transaction_journal_id"]?.jsonPrimitive?.content ?: journalId
-			matchedE2eToJournalEntries.getOrPut(e2e) { mutableListOf() }.add(JournalMatch(journalId, splitId))
+			val match = JournalMatch(journalId, splitId)
+			matchedE2eToJournalEntries.getOrPut(e2e) { mutableListOf() }.add(match)
+
+			val id = merchantAccountIds[merchant] ?: createMerchantAccount(merchant) ?: continue
+			merchantAccountIds[merchant] = id
+			logInfo("Using expense account '$merchant' (id=$id).")
+
+			updateTransaction(match, e2e, id, merchant)
+
 		}
 		val pagination = root["meta"]
 			?.jsonObject
@@ -152,22 +158,6 @@ runBlocking {
 	for (e2e in unmatched) {
 		logWarn("No matching Firefly III journal found for E2E '$e2e'.")
 		e2eNotFoundCount += 1
-	}
-	val merchantsNeedingAccounts = matchedE2eToJournalEntries.keys.map { e2eToMerchant[it]!! }.toSet()
-	for (merchant in merchantsNeedingAccounts) {
-		val id = createMerchantAccount(merchant) ?: continue
-		merchantAccountIds[merchant] = id
-		logInfo("Created expense account '$merchant' (id=$id).")
-	}
-	for ((e2e, matches) in matchedE2eToJournalEntries) {
-		val merchant = e2eToMerchant[e2e] ?: continue
-		val destinationAccountId = merchantAccountIds[merchant] ?: run {
-			logError("No expense account ID available for merchant '$merchant'. Skipping journals for E2E '$e2e'.")
-			continue
-		}
-		for (match in matches) {
-			updateTransaction(match, e2e, destinationAccountId, merchant)
-		}
 	}
 }
 
@@ -185,7 +175,7 @@ if (dryRun) {
 }
 
 suspend fun updateTransaction(match: JournalMatch, e2e: String, destinationAccountId: String, merchant: String) {
-	logInfo("Getting ${match.journalId} for $e2e")
+	logInfo("Using JournalId ${match.journalId} for $e2e")
 	val detailResponse = client.get("$baseUrl/api/v1/transactions/${match.journalId}") {
 		header("Authorization", "Bearer $accessToken")
 	}
@@ -314,6 +304,7 @@ suspend fun createMerchantAccount(merchant: String): String? {
 		return null
 	}
 	merchantAccountsCreated += 1
+	logInfo("Created expense account '$merchant' (id=$id).")
 	return id
 }
 
