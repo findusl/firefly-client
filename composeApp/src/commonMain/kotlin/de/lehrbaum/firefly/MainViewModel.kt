@@ -19,6 +19,13 @@ import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.io.IOException
 
+data class BannerState(val message: String, val type: BannerType)
+
+enum class BannerType {
+	Success,
+	Error,
+}
+
 @OptIn(ExperimentalTime::class)
 class MainViewModel(
 	private val client: HttpClient,
@@ -41,7 +48,7 @@ class MainViewModel(
 	val tagField = AutocompleteField(scope, autocompleteApi::tags, TagSuggestion::name)
 
 	var amount by mutableStateOf("")
-	var errorMessage by mutableStateOf<String?>(null)
+	var bannerState by mutableStateOf<BannerState?>(null)
 	var isSaving by mutableStateOf(false)
 		private set
 
@@ -63,13 +70,13 @@ class MainViewModel(
 	suspend fun save() {
 		if (isSaving) return
 
+		dismissBanner()
 		val src = sourceField.selected
 		if (src != null && amount.isNotBlank() && descriptionField.selectedText.isNotBlank()) {
 			val parsedAmount = parseAmount(amount).getOrElse {
-				errorMessage = "Invalid amount"
+				showError("Invalid amount")
 				return
 			}
-			clearError()
 			val normalizedAmount = parsedAmount
 			isSaving = true
 			val savedSourceText = sourceField.selectedText
@@ -87,9 +94,12 @@ class MainViewModel(
 			}.onSuccess {
 				settings.putString(LAST_SOURCE_ACCOUNT_KEY, savedSourceText)
 				clear(keepSource = true)
+				showSuccess("Transaction saved successfully")
 			}.also {
 				isSaving = false
 			}
+		} else {
+			showError("Please fill in all required fields")
 		}
 	}
 
@@ -97,7 +107,6 @@ class MainViewModel(
 		try {
 			Result.success(block()).also {
 				Napier.d("Network call succeeded")
-				clearError()
 			}
 		} catch (throwable: Throwable) {
 			when (throwable) {
@@ -112,32 +121,42 @@ class MainViewModel(
 					val bodyInfo = body?.let {
 						if (it.length > 500) it.take(497) + "..." else it
 					}
-					errorMessage = buildString {
-						append("Request to ")
-						append(url)
-						append(" failed (")
-						append(statusInfo)
-						append(')')
-						if (bodyInfo != null) {
-							append(": ")
-							append(bodyInfo)
-						}
-					}
+					showError(
+						buildString {
+							append("Request to ")
+							append(url)
+							append(" failed (")
+							append(statusInfo)
+							append(')')
+							if (bodyInfo != null) {
+								append(": ")
+								append(bodyInfo)
+							}
+						},
+					)
 				}
 				is IOException -> {
 					Napier.e("Network call failed due to I/O error", throwable)
-					errorMessage = "Connection failed"
+					showError("Connection failed")
 				}
 				else -> {
 					Napier.e("Network call failed", throwable)
-					errorMessage = throwable.message ?: "Unexpected error"
+					showError(throwable.message ?: "Unexpected error")
 				}
 			}
 			Result.failure(throwable)
 		}
 
-	fun clearError() {
-		errorMessage = null
+	private fun showError(message: String) {
+		bannerState = BannerState(message, BannerType.Error)
+	}
+
+	private fun showSuccess(message: String) {
+		bannerState = BannerState(message, BannerType.Success)
+	}
+
+	fun dismissBanner() {
+		bannerState = null
 	}
 
 	@OptIn(ExperimentalTime::class)

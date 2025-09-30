@@ -4,6 +4,7 @@
 @file:DependsOn("io.ktor:ktor-client-content-negotiation-jvm:3.3.0")
 @file:DependsOn("io.ktor:ktor-serialization-kotlinx-json-jvm:3.3.0")
 @file:DependsOn("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.9.0")
+@file:Suppress("ktlint:standard:property-naming")
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
