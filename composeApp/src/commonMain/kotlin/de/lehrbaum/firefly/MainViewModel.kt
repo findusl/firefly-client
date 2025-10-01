@@ -52,6 +52,11 @@ class MainViewModel(
 	var isSaving by mutableStateOf(false)
 		private set
 
+	var sourceFieldError by mutableStateOf<String?>(null)
+		private set
+	var descriptionFieldError by mutableStateOf<String?>(null)
+		private set
+
 	@OptIn(ExperimentalTime::class)
 	var dateTime by mutableStateOf(
 		Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()),
@@ -66,13 +71,57 @@ class MainViewModel(
 		dateTime = newDateTime
 	}
 
+	fun onSourceTextChange(newText: String) {
+		sourceFieldError = null
+		sourceField.onTextChange(newText)
+	}
+
+	fun onSourceSuggestionSelected(account: Account) {
+		sourceFieldError = null
+		sourceField.select(account)
+	}
+
+	fun onDescriptionTextChange(newText: String) {
+		descriptionFieldError = null
+		descriptionField.onTextChange(newText)
+	}
+
+	fun onDescriptionSuggestionSelected(description: String) {
+		descriptionFieldError = null
+		descriptionField.select(description)
+	}
+
 	@OptIn(ExperimentalTime::class)
 	suspend fun save() {
 		if (isSaving) return
 
 		dismissBanner()
+		sourceFieldError = null
+		descriptionFieldError = null
+
 		val src = sourceField.selected
-		if (src != null && amount.isNotBlank() && descriptionField.selectedText.isNotBlank()) {
+		val description = descriptionField.selectedText
+		var hasError = false
+		if (src == null) {
+			sourceFieldError = if (sourceField.selectedText.isBlank()) {
+				"Source account is required"
+			} else {
+				"Select a valid source account"
+			}
+			hasError = true
+		}
+		if (description.isBlank()) {
+			descriptionFieldError = "Description is required"
+			hasError = true
+		}
+		if (amount.isBlank()) {
+			hasError = true
+		}
+		if (hasError) {
+			showError("Please fill in all required fields")
+			return
+		}
+		if (src != null && amount.isNotBlank() && description.isNotBlank()) {
 			val parsedAmount = parseAmount(amount).getOrElse {
 				showError("Invalid amount")
 				return
@@ -98,8 +147,6 @@ class MainViewModel(
 			}.also {
 				isSaving = false
 			}
-		} else {
-			showError("Please fill in all required fields")
 		}
 	}
 
@@ -161,6 +208,8 @@ class MainViewModel(
 
 	@OptIn(ExperimentalTime::class)
 	fun clear(keepSource: Boolean = false) {
+		sourceFieldError = null
+		descriptionFieldError = null
 		if (!keepSource) {
 			sourceField.clear()
 		}
