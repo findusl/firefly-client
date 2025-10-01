@@ -88,9 +88,21 @@ fun App(
 				)
 				Spacer(Modifier.size(8.dp))
 			}
-			AutocompleteTextField(field = viewModel.sourceField, label = "Source account")
+			AutocompleteTextField(
+				field = viewModel.sourceField,
+				label = "Source account",
+				error = viewModel.sourceFieldError,
+				onTextChange = viewModel::onSourceTextChange,
+				onSuggestionSelected = viewModel::onSourceSuggestionSelected,
+			)
 			AutocompleteTextField(field = viewModel.targetField, label = "Target account")
-			AutocompleteTextField(field = viewModel.descriptionField, label = "Description")
+			AutocompleteTextField(
+				field = viewModel.descriptionField,
+				label = "Description",
+				error = viewModel.descriptionFieldError,
+				onTextChange = viewModel::onDescriptionTextChange,
+				onSuggestionSelected = viewModel::onDescriptionSuggestionSelected,
+			)
 			AutocompleteTextField(field = viewModel.tagField, label = "Tag (optional)")
 			OutlinedTextField(
 				modifier = Modifier.fillMaxWidth(),
