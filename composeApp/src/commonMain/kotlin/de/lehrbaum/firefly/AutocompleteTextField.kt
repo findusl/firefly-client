@@ -17,7 +17,11 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun <T> AutocompleteTextField(field: AutocompleteField<T>, label: String) {
+fun <T> AutocompleteTextField(
+	field: AutocompleteField<T>,
+	label: String,
+	error: String? = null,
+) {
 	val focusRequester = remember { FocusRequester() }
 	ExposedDropdownMenuBox(
 		expanded = field.expanded,
@@ -31,6 +35,8 @@ fun <T> AutocompleteTextField(field: AutocompleteField<T>, label: String) {
 			value = field.text,
 			onValueChange = field::onTextChange,
 			label = { Text(label) },
+			isError = error != null,
+			supportingText = error?.let { message -> { Text(message) } },
 		)
 		ExposedDropdownMenu(
 			expanded = field.expanded,
