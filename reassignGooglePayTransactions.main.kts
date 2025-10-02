@@ -151,7 +151,6 @@ runBlocking {
 			logInfo("Using expense account '$merchant' (id=$id).")
 
 			updateTransaction(match, e2e, id, merchant)
-
 		}
 		logInfo("Processed page '$page' of total $totalPages")
 		page += 1
@@ -176,7 +175,12 @@ if (dryRun) {
 	logInfo("Dry run complete. Re-run with -f to apply these changes.")
 }
 
-suspend fun updateTransaction(match: JournalMatch, e2e: String, destinationAccountId: String, merchant: String) {
+suspend fun updateTransaction(
+	match: JournalMatch,
+	e2e: String,
+	destinationAccountId: String,
+	merchant: String,
+) {
 	logInfo("Using JournalId ${match.journalId} for $e2e")
 	val detailResponse = client.get("$baseUrl/api/v1/transactions/${match.journalId}") {
 		header("Authorization", "Bearer $accessToken")
@@ -316,7 +320,6 @@ fun appendProvenance(existing: String?): String =
 	} else {
 		"$existing\n\n$PROVENANCE_NOTE"
 	}
-
 
 fun loadCsv(file: File): Map<String, String> {
 	val lines = file.readLines().filter { it.isNotBlank() }

@@ -52,6 +52,23 @@ class MainViewModel(
 	var isSaving by mutableStateOf(false)
 		private set
 
+	var showValidationErrors by mutableStateOf(false)
+		private set
+
+	val sourceAccountError: String?
+		get() = if (showValidationErrors && sourceField.selectedText.isBlank()) {
+			"Select a source account"
+		} else {
+			null
+		}
+
+	val descriptionError: String?
+		get() = if (showValidationErrors && descriptionField.selectedText.isBlank()) {
+			"Enter a description"
+		} else {
+			null
+		}
+
 	@OptIn(ExperimentalTime::class)
 	var dateTime by mutableStateOf(
 		Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()),
@@ -70,6 +87,7 @@ class MainViewModel(
 	suspend fun save() {
 		if (isSaving) return
 
+		showValidationErrors = true
 		dismissBanner()
 		val src = sourceField.selected
 		if (src != null && amount.isNotBlank() && descriptionField.selectedText.isNotBlank()) {
@@ -98,8 +116,6 @@ class MainViewModel(
 			}.also {
 				isSaving = false
 			}
-		} else {
-			showError("Please fill in all required fields")
 		}
 	}
 
@@ -169,6 +185,7 @@ class MainViewModel(
 		tagField.clear()
 		amount = ""
 		dateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+		showValidationErrors = false
 	}
 
 	private fun prefillLastSource() {

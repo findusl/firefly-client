@@ -4,6 +4,8 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.waitUntilAtLeastOneExists
 import java.awt.GraphicsEnvironment
 import org.junit.Assume.assumeFalse
@@ -44,5 +46,16 @@ class AppTextFieldsUiTest {
 		).forEach { label ->
 			composeTestRule.waitUntilAtLeastOneExists(hasText(label))
 		}
+	}
+
+	@Test
+	fun showsErrorsWhenRequiredFieldsMissing() {
+		assumeFalse(GraphicsEnvironment.isHeadless())
+		composeTestRule.setContent { App() }
+
+		composeTestRule.onNodeWithText("Save").performClick()
+
+		composeTestRule.waitUntilAtLeastOneExists(hasText("Select a source account"))
+		composeTestRule.waitUntilAtLeastOneExists(hasText("Enter a description"))
 	}
 }
