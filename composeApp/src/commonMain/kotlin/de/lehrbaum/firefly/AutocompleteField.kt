@@ -32,6 +32,8 @@ class AutocompleteField<T>(
 	var selected by mutableStateOf<T?>(null)
 	var suggestions by mutableStateOf<PersistentList<T>>(persistentListOf())
 		private set
+	var isLoading by mutableStateOf(false)
+		private set
 
 	val selectedText: String
 		get() = selected?.let(textOf) ?: text
@@ -41,8 +43,13 @@ class AutocompleteField<T>(
 	init {
 		scope.launch {
 			query.debounce(debounce).collectLatest { q ->
-				suggestions = fetcher(q).toPersistentList()
-				selected = suggestions.firstOrNull { textOf(it) == text }
+				isLoading = true
+				try {
+					suggestions = fetcher(q).toPersistentList()
+					selected = suggestions.firstOrNull { textOf(it) == text }
+				} finally {
+					isLoading = false
+				}
 			}
 		}
 	}
@@ -65,6 +72,7 @@ class AutocompleteField<T>(
 		expanded = false
 		selected = null
 		suggestions = persistentListOf()
+		isLoading = false
 		query.value = ""
 	}
 
