@@ -1,6 +1,8 @@
 package de.lehrbaum.firefly
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -13,6 +15,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +45,19 @@ fun <T> AutocompleteTextField(
 			expanded = field.expanded,
 			onDismissRequest = { field.expanded = false },
 		) {
+			if (field.isLoading) {
+				DropdownMenuItem(
+					onClick = {},
+					enabled = false,
+					leadingIcon = {
+						CircularProgressIndicator(
+							modifier = Modifier.size(16.dp),
+							strokeWidth = 2.dp,
+						)
+					},
+					text = { Text("Loading…") },
+				)
+			}
 			field.suggestions.forEach { suggestion ->
 				DropdownMenuItem(
 					onClick = { field.select(suggestion) },
