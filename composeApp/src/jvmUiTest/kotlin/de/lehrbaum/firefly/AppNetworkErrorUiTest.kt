@@ -5,6 +5,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.test.waitUntilAtLeastOneExists
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
@@ -20,11 +21,9 @@ import org.junit.Test
 
 @OptIn(ExperimentalTestApi::class)
 class AppNetworkErrorUiTest {
-	@get:Rule
-	val composeTestRule = createComposeRule()
 
 	@Test
-	fun showsBackendErrorMessageFromResponseException() {
+	fun showsBackendErrorMessageFromResponseException() = runComposeUiTest {
 		val mockEngine = MockEngine { request ->
 			val path = request.url.encodedPath
 			when {
@@ -61,15 +60,15 @@ class AppNetworkErrorUiTest {
 		viewModel.descriptionField.onTextChange("Groceries")
 		viewModel.amount = "10.00"
 
-		composeTestRule.setContent {
+		setContent {
 			App(viewModelFactory = { viewModel })
 		}
 
-		composeTestRule.onNodeWithText("Save").performClick()
+		onNodeWithText("Save").performClick()
 
 		val expectedMessage =
 			"Request to https://firefly.lehrenko.de/api/v1/transactions failed (400 Bad Request): Backend rejected transaction"
-		composeTestRule.waitUntilAtLeastOneExists(
+		waitUntilAtLeastOneExists(
 			hasText(expectedMessage),
 		)
 	}
