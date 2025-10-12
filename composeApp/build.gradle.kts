@@ -5,17 +5,28 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
 	alias(libs.plugins.kotlinMultiplatform)
-	alias(libs.plugins.androidApplication)
+	alias(libs.plugins.androidApplication) apply false
 	alias(libs.plugins.composeMultiplatform)
 	alias(libs.plugins.composeCompiler)
 	alias(libs.plugins.serialization)
 	alias(libs.plugins.buildKonfig)
 }
 
+val androidEnabled = providers
+	.gradleProperty("firefly.enableAndroid")
+	.map(String::toBoolean)
+	.orElse(false)
+
+if (androidEnabled.get()) {
+	pluginManager.apply(libs.plugins.androidApplication.get().pluginId)
+}
+
 kotlin {
-	androidTarget {
-		compilerOptions {
-			jvmTarget.set(JvmTarget.JVM_11)
+	if (androidEnabled.get()) {
+		androidTarget {
+			compilerOptions {
+				jvmTarget.set(JvmTarget.JVM_11)
+			}
 		}
 	}
 
@@ -36,10 +47,13 @@ kotlin {
 	}
 
 	sourceSets {
-		androidMain.dependencies {
-			implementation(compose.preview)
-			implementation(libs.androidx.activity.compose)
-			implementation(libs.ktor.client.cio)
+		if (androidEnabled.get()) {
+			val androidMain by getting
+			androidMain.dependencies {
+				implementation(compose.preview)
+				implementation(libs.androidx.activity.compose)
+				implementation(libs.ktor.client.cio)
+			}
 		}
 		commonMain.dependencies {
 			implementation(compose.components.resources)
@@ -115,33 +129,6 @@ buildkonfig {
 	}
 }
 
-android {
-	namespace = "de.lehrbaum.firefly"
-	compileSdk = libs.versions.android.compileSdk.get().toInt()
-
-	defaultConfig {
-		applicationId = "de.lehrbaum.firefly"
-		minSdk = libs.versions.android.minSdk.get().toInt()
-		targetSdk = libs.versions.android.targetSdk.get().toInt()
-		versionCode = 1
-		versionName = "1.0"
-	}
-	packaging {
-		resources {
-			excludes += "/META-INF/{AL2.0,LGPL2.1}"
-		}
-	}
-	buildTypes {
-		getByName("release") {
-			isMinifyEnabled = false
-		}
-	}
-	compileOptions {
-		sourceCompatibility = JavaVersion.VERSION_11
-		targetCompatibility = JavaVersion.VERSION_11
-	}
-}
-
-dependencies {
-	debugImplementation(compose.uiTooling)
+if (androidEnabled.get()) {
+	apply(from = file("android.gradle.kts"))
 }
