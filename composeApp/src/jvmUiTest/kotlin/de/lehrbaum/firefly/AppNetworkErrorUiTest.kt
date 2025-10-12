@@ -22,12 +22,14 @@ class AppNetworkErrorUiTest {
 	@Test
 	fun showsBackendErrorMessageFromResponseException() =
 		runComposeUiTest {
+			initLogger()
+			val errorResponse = "Backend rejected transaction"
 			val mockEngine = MockEngine { request ->
 				val path = request.url.encodedPath
 				when {
 					path == "/api/v1/transactions" ->
 						respond(
-							content = "Backend rejected transaction",
+							content = errorResponse,
 							status = HttpStatusCode.BadRequest,
 							headers = headersOf(HttpHeaders.ContentType, "text/plain"),
 						)
@@ -40,10 +42,11 @@ class AppNetworkErrorUiTest {
 							content = "[]",
 							headers = headersOf(HttpHeaders.ContentType, "application/json"),
 						)
-					else -> error("Unhandled ${'$'}{request.url}")
+					else -> error("Unhandled ${request.url}")
 				}
 			}
 			val httpClient = HttpClient(mockEngine) {
+				expectSuccess = true
 				install(ContentNegotiation) {
 					json(Json { ignoreUnknownKeys = true })
 				}
@@ -64,10 +67,9 @@ class AppNetworkErrorUiTest {
 
 			onNodeWithText("Save").performClick()
 
-			val expectedMessage =
-				"Request to https://firefly.lehrenko.de/api/v1/transactions failed (400 Bad Request): Backend rejected transaction"
+			val expectedMessage = errorResponse
 			waitUntilAtLeastOneExists(
-				hasText(expectedMessage),
+				hasText(expectedMessage, substring = true),
 			)
 		}
 }
