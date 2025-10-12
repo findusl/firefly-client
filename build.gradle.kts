@@ -15,6 +15,16 @@ allprojects {
 	apply(plugin = rootProject.libs.plugins.ktlint.get().pluginId)
 
 	ktlint {
+		kotlinScriptAdditionalPaths {
+			include(
+				fileTree(
+					mapOf(
+						"dir" to projectDir,
+						"include" to listOf("*.gradle.kts", "gradle/**/*.gradle.kts"),
+					),
+				),
+			)
+		}
 		filter {
 			exclude("**/generated/**")
 			exclude("**/BuildKonfig.kt")
