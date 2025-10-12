@@ -1,6 +1,4 @@
 import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
-import org.gradle.api.plugins.JavaBasePlugin
-import org.gradle.api.tasks.testing.Test
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -33,6 +31,15 @@ kotlin {
 	jvm {
 		compilerOptions {
 			jvmTarget.set(JvmTarget.JVM_11)
+		}
+		val testCompilation = compilations["test"]
+		val uiTestCompilation = compilations.create("uiTest") {
+			associateWith(testCompilation)
+		}
+		testRuns {
+			val uiTest by creating {
+				setExecutionSourceFrom(uiTestCompilation)
+			}
 		}
 	}
 
@@ -77,12 +84,19 @@ kotlin {
 			implementation(compose.desktop.currentOs)
 			implementation(libs.ktor.client.cio)
 		}
-		jvmTest.dependencies {
-			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-			implementation(compose.uiTest)
-			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-			implementation(compose.desktop.uiTestJUnit4)
-			implementation(libs.junit)
+		val jvmTest by getting {
+			dependencies {
+				implementation(libs.junit)
+			}
+		}
+		val jvmUiTest by getting {
+			dependencies {
+				implementation(libs.junit)
+				@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+				implementation(compose.uiTest)
+				@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+				implementation(compose.desktop.uiTestJUnit4)
+			}
 		}
 		iosArm64Main.dependencies {
 			implementation(libs.ktor.client.darwin)
@@ -91,24 +105,10 @@ kotlin {
 			implementation(libs.ktor.client.darwin)
 		}
 		commonTest.dependencies {
-			@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-			implementation(compose.uiTest)
 			implementation(libs.kotlin.test)
 			implementation(libs.kotlinx.coroutines.test)
 			implementation(libs.ktor.client.mock)
 		}
-	}
-}
-
-val jvmTest by tasks.existing(Test::class)
-
-tasks.register<Test>("jvmNonUiTest") {
-	group = JavaBasePlugin.VERIFICATION_GROUP
-	description = "Runs JVM tests except those in the UiTest category"
-	testClassesDirs = jvmTest.get().testClassesDirs
-	classpath = jvmTest.get().classpath
-	useJUnit {
-		excludeCategories("de.lehrbaum.firefly.UiTest")
 	}
 }
 

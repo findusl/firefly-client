@@ -2,7 +2,6 @@ package de.lehrbaum.firefly
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -15,34 +14,17 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
-import java.awt.GraphicsEnvironment
 import kotlinx.serialization.json.Json
-import org.junit.Assume.assumeFalse
 import org.junit.Rule
 import org.junit.Test
-import org.junit.experimental.categories.Category
-import org.junit.rules.RuleChain
-import org.junit.rules.TestRule
 
 @OptIn(ExperimentalTestApi::class)
-@Category(UiTest::class)
 class AppNetworkErrorUiTest {
-	private val composeRuleDelegate: ComposeContentTestRule? =
-		if (GraphicsEnvironment.isHeadless()) null else createComposeRule()
-
-	private val composeTestRule: ComposeContentTestRule
-		get() = requireNotNull(composeRuleDelegate) {
-			"Compose tests require a displayable environment"
-		}
-
 	@get:Rule
-	val headlessAwareRule: TestRule = composeRuleDelegate
-		?.let { RuleChain.outerRule(HeadlessSkipRule).around(it) }
-		?: HeadlessSkipRule
+	val composeTestRule = createComposeRule()
 
 	@Test
 	fun showsBackendErrorMessageFromResponseException() {
-		assumeFalse(GraphicsEnvironment.isHeadless())
 		val mockEngine = MockEngine { request ->
 			val path = request.url.encodedPath
 			when {
