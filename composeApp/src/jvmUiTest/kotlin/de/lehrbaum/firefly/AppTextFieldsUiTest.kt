@@ -5,18 +5,17 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.test.waitUntilAtLeastOneExists
 import org.junit.Rule
 import org.junit.Test
 
 @OptIn(ExperimentalTestApi::class)
 class AppTextFieldsUiTest {
-	@get:Rule
-	val composeTestRule = createComposeRule()
 
 	@Test
-	fun displaysAllTextFields() {
-		composeTestRule.setContent { App() }
+	fun displaysAllTextFields() = runComposeUiTest {
+		setContent { App() }
 
 		listOf(
 			"Source account",
@@ -26,17 +25,17 @@ class AppTextFieldsUiTest {
 			"Amount",
 			"Date & Time",
 		).forEach { label ->
-			composeTestRule.waitUntilAtLeastOneExists(hasText(label))
+			waitUntilAtLeastOneExists(hasText(label))
 		}
 	}
 
 	@Test
-	fun showsErrorsWhenRequiredFieldsMissing() {
-		composeTestRule.setContent { App() }
+	fun showsErrorsWhenRequiredFieldsMissing() = runComposeUiTest {
+		setContent { App() }
 
-		composeTestRule.onNodeWithText("Save").performClick()
+		onNodeWithText("Save").performClick()
 
-		composeTestRule.waitUntilAtLeastOneExists(hasText("Select a source account"))
-		composeTestRule.waitUntilAtLeastOneExists(hasText("Enter a description"))
+		waitUntilAtLeastOneExists(hasText("Select a source account"))
+		waitUntilAtLeastOneExists(hasText("Enter a description"))
 	}
 }
