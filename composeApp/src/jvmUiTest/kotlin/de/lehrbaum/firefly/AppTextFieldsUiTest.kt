@@ -7,15 +7,27 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.test.waitUntilAtLeastOneExists
 import com.russhwolf.settings.MapSettings
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respondBadRequest
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
 import org.junit.Test
 
 @OptIn(ExperimentalTestApi::class)
 class AppTextFieldsUiTest {
+	private val testHttpClient = HttpClient(MockEngine { _ -> respondBadRequest() }) {
+		this.install(ContentNegotiation) {
+			this.json(Json { this.ignoreUnknownKeys = true })
+		}
+	}
+	private val testMainViewModel = MainViewModel(testHttpClient, settings = MapSettings())
+
 	@Test
 	fun displaysAllTextFields() =
 		runComposeUiTest {
-			val settings = MapSettings()
-			setContent { App(settings = settings) }
+			setContent { App(viewModelFactory = { testMainViewModel }) }
 
 			listOf(
 				"Source account",
@@ -32,8 +44,7 @@ class AppTextFieldsUiTest {
 	@Test
 	fun showsErrorsWhenRequiredFieldsMissing() =
 		runComposeUiTest {
-			val settings = MapSettings()
-			setContent { App(settings = settings) }
+			setContent { App(viewModelFactory = { testMainViewModel }) }
 
 			onNodeWithText("Save").performClick()
 

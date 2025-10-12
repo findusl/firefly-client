@@ -3,6 +3,7 @@ package de.lehrbaum.firefly
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.github.aakira.napier.Napier
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.ExperimentalTime
@@ -44,14 +45,15 @@ class AutocompleteField<T>(
 		scope.launch {
 			query.debounce(debounce).collectLatest { q ->
 				isLoading = true
-				try {
+				runCatching {
 					suggestions = fetcher(q).toPersistentList()
 					if (selected == null) {
 						selected = suggestions.firstOrNull { textOf(it) == text }
 					}
-				} finally {
-					isLoading = false
+				}.onFailure {
+					Napier.w("Failed to fetch autocomplete suggestions", it)
 				}
+				isLoading = false
 			}
 		}
 	}

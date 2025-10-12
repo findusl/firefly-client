@@ -26,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.unit.dp
-import com.russhwolf.settings.Settings
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
@@ -50,7 +49,6 @@ private val SIMPLE_FORMAT = LocalDateTime.Format {
 @Preview
 @OptIn(ExperimentalMaterial3Api::class)
 fun App(
-	settings: Settings = Settings(),
 	viewModelFactory: () -> MainViewModel = {
 		MainViewModel(
 			HttpClient {
@@ -59,7 +57,6 @@ fun App(
 					json(Json { ignoreUnknownKeys = true })
 				}
 			},
-			settings = settings,
 		)
 	},
 ) {
