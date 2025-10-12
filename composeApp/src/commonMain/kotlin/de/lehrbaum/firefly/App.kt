@@ -62,6 +62,7 @@ fun App(
 		)
 	},
 ) {
+	initLogger()
 	MaterialTheme {
 		val viewModel = remember(viewModelFactory) { viewModelFactory() }
 		val scope = rememberCoroutineScope()
