@@ -33,27 +33,17 @@ class AppNetworkErrorUiTest {
 							status = HttpStatusCode.BadRequest,
 							headers = headersOf(HttpHeaders.ContentType, "text/plain"),
 						)
-					path in setOf(
-						"/api/v1/autocomplete/accounts",
-						"/api/v1/autocomplete/transactions",
-						"/api/v1/autocomplete/tags",
-					) ->
-						respond(
-							content = "[]",
-							headers = headersOf(HttpHeaders.ContentType, "application/json"),
-						)
 					else -> error("Unhandled ${request.url}")
 				}
 			}
 			val httpClient = HttpClient(mockEngine) {
-				expectSuccess = true
-				install(ContentNegotiation) {
-					json(Json { ignoreUnknownKeys = true })
+				this.expectSuccess = true
+				this.install(ContentNegotiation) {
+					this.json(Json { this.ignoreUnknownKeys = true })
 				}
 			}
 			val viewModel = MainViewModel(
 				client = httpClient,
-				autocompleteApi = AutocompleteApi(httpClient),
 			)
 			val sourceAccount = Account(id = "1", name = "Checking")
 			viewModel.sourceField.select(sourceAccount)
