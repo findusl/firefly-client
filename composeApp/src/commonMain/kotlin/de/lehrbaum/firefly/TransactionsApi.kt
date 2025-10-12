@@ -55,6 +55,7 @@ suspend fun createTransaction(
 		destinationName = if (target == null) targetText else null,
 		tags = tag?.let(::listOf),
 	)
+	Napier.i("Sending transaction: $split")
 	client.post("${BuildKonfig.BASE_URL}/api/v1/transactions") {
 		header(HttpHeaders.Authorization, "Bearer ${BuildKonfig.ACCESS_TOKEN}")
 		accept(ContentType.parse("application/vnd.api+json"))
