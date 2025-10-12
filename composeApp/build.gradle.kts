@@ -96,6 +96,7 @@ kotlin {
 				implementation(compose.uiTest)
 				@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
 				implementation(compose.desktop.uiTestJUnit4)
+				implementation(libs.multiplatform.settings.test)
 			}
 		}
 		iosArm64Main.dependencies {
