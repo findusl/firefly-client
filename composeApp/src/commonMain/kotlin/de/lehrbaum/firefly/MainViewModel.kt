@@ -29,14 +29,13 @@ enum class BannerType {
 @OptIn(ExperimentalTime::class)
 class MainViewModel(
 	private val client: HttpClient,
+	private val settings: Settings = Settings(),
 	private val autocompleteApi: AutocompleteApi = AutocompleteApi(client),
 	private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ) {
 	companion object {
 		private const val LAST_SOURCE_ACCOUNT_KEY = "last_source_account"
 	}
-
-	private val settings: Settings = Settings()
 
 	val sourceField = AutocompleteField(
 		scope,
