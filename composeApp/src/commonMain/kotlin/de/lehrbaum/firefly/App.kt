@@ -54,6 +54,7 @@ fun App(
 	viewModelFactory: () -> MainViewModel = {
 		MainViewModel(
 			HttpClient {
+				expectSuccess = true
 				install(ContentNegotiation) {
 					json(Json { ignoreUnknownKeys = true })
 				}

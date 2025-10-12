@@ -46,7 +46,9 @@ class AutocompleteField<T>(
 				isLoading = true
 				try {
 					suggestions = fetcher(q).toPersistentList()
-					selected = suggestions.firstOrNull { textOf(it) == text }
+					if (selected == null) {
+						selected = suggestions.firstOrNull { textOf(it) == text }
+					}
 				} finally {
 					isLoading = false
 				}
