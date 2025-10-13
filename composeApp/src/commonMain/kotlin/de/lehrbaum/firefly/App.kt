@@ -35,7 +35,6 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format.*
 import kotlinx.serialization.json.Json
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 private val SIMPLE_FORMAT = LocalDateTime.Format {
 	date(LocalDate.Formats.ISO)
@@ -46,7 +45,6 @@ private val SIMPLE_FORMAT = LocalDateTime.Format {
 }
 
 @Composable
-@Preview
 @OptIn(ExperimentalMaterial3Api::class)
 fun App(
 	viewModelFactory: () -> MainViewModel = {
