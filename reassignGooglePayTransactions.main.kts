@@ -20,6 +20,9 @@ import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
 import java.io.File
 import kotlin.system.exitProcess
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -83,7 +86,7 @@ if (!csvFile.isFile) {
 
 val client = HttpClient(CIO) {
 	engine {
-		requestTimeout = 60_000
+		requestTimeout = 600_000
 	}
 }
 
@@ -105,16 +108,26 @@ runBlocking {
 	}
 	val merchantAccountIds = mutableMapOf<String, String>()
 	val matchedE2eToJournalEntries = mutableMapOf<String, MutableList<JournalMatch>>()
-	var page = 1
 	var totalPages: Int? = null
-	while (totalPages == null || page <= totalPages) {
+	val taskQueue = Channel<suspend () -> Unit>(capacity = Channel.RENDEZVOUS)
+	val limitedDispatcher = this.coroutineContext[CoroutineDispatcher]!!.limitedParallelism(10)
+
+	suspend fun runner() {
+		val task = taskQueue.receive()
+		launch { runner() }
+		task()
+	}
+	val taskRunner = launch(limitedDispatcher) {
+		runner()
+	}
+	while (totalPages != 0) {
 		val response = client.get("$baseUrl/api/v1/accounts/$DEFAULT_GOOGLE_PAY_ACCOUNT_ID/transactions") {
 			header("Authorization", "Bearer $accessToken")
-			parameter("page", page)
+			parameter("page", 1)
 		}
 		val bodyText = response.bodyAsText()
 		if (!response.status.isSuccess()) {
-			logError("Failed to list transactions (page $page): HTTP ${response.status.value} ${response.status.description}")
+			logError("Failed to list transactions: HTTP ${response.status.value} ${response.status.description}")
 			if (bodyText.isNotBlank()) {
 				logError(bodyText)
 			}
@@ -127,7 +140,7 @@ runBlocking {
 			?.get("pagination")
 			?.jsonObject
 		totalPages = pagination?.get("total_pages")?.jsonPrimitive?.int
-		logInfo("Processing page '$page' of total $totalPages")
+		logInfo("Leftover pages $totalPages")
 		for (entry in data) {
 			val journal = entry.jsonObject
 			val journalId = journal["id"]?.jsonPrimitive?.content ?: continue
@@ -146,15 +159,20 @@ runBlocking {
 			val match = JournalMatch(journalId, splitId)
 			matchedE2eToJournalEntries.getOrPut(e2e) { mutableListOf() }.add(match)
 
-			val id = merchantAccountIds[merchant] ?: createMerchantAccount(merchant) ?: continue
+			val id = merchantAccountIds[merchant] ?: createMerchantAccount(merchant) ?: run {
+				logWarn("Failed to create merchant account for '$merchant'. Skipping journal '$journalId' (split '$splitId') for this E2E.")
+				continue
+			}
 			merchantAccountIds[merchant] = id
 			logInfo("Using expense account '$merchant' (id=$id).")
 
-			updateTransaction(match, e2e, id, merchant)
+			taskQueue.send {
+				updateTransaction(match, e2e, id, merchant)
+			}
 		}
-		logInfo("Processed page '$page' of total $totalPages")
-		page += 1
+		logInfo("Processed page of total $totalPages")
 	}
+	taskRunner.cancel()
 	val unmatched = e2eToMerchant.keys.filterNot(matchedE2eToJournalEntries::containsKey)
 	for (e2e in unmatched) {
 		logWarn("No matching Firefly III journal found for E2E '$e2e'.")
