@@ -25,6 +25,10 @@ updates:
       - dependency-name: "org.jetbrains.kotlinx:kotlinx-datetime"
         versions:
           - "0.7.1-0.6.x-compat"
+      # Breaks my UI Tests https://youtrack.jetbrains.com/issue/CMP-9081/JVM-Compose-UI-Tests-fail-in-1.10.0-alpha02-of-material3
+      - dependency-name: "org.jetbrains.compose.material3:material3"
+        versions:
+          - "1.10.0-alpha02"
     groups:
       all-dependencies:
         patterns:
