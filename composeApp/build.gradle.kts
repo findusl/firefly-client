@@ -68,8 +68,6 @@ kotlin {
 			implementation(compose.foundation)
 			implementation(compose.runtime)
 			implementation(compose.ui)
-			implementation(libs.androidx.lifecycle.runtimeCompose)
-			implementation(libs.androidx.lifecycle.viewmodelCompose)
 			implementation(libs.compose.material3)
 			implementation(libs.kotlinx.collections.immutable)
 			implementation(libs.kotlinx.datetime)
