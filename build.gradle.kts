@@ -18,12 +18,8 @@ val printKtlintFormatTask = tasks.register("printKtlintFormatTask") {
 }
 
 tasks
-	.matching {
-		println("Filtering task " + it.name)
-		it.name.startsWith("ktlint") && it.name.endsWith("Check")
-	}.configureEach {
-		finalizedBy(printKtlintFormatTask)
-	}
+	.matching { it.name.startsWith("ktlint") && it.name.endsWith("Check") }
+	.configureEach { finalizedBy(printKtlintFormatTask) }
 
 allprojects {
 	apply(plugin = rootProject.libs.plugins.ktlint.get().pluginId)
@@ -46,12 +42,8 @@ allprojects {
 	}
 
 	tasks
-		.matching {
-			println("Filtering task " + it.name)
-			it.name.startsWith("ktlint") && it.name.endsWith("Check")
-		}.configureEach {
-			finalizedBy(printKtlintFormatTask)
-		}
+		.matching { it.name.startsWith("ktlint") && it.name.endsWith("Check") }
+		.configureEach { finalizedBy(printKtlintFormatTask) }
 }
 
 tasks.register("checkAgentsEnvironment") {
