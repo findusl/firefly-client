@@ -11,12 +11,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,17 +64,4 @@ fun <T> AutocompleteTextField(
 			}
 		}
 	}
-}
-
-@Preview
-@Composable
-private fun AutocompleteTextField_Preview() {
-	val scope = rememberCoroutineScope()
-	val fetcher: suspend (String) -> List<String> = { q ->
-		val all = listOf("Apple", "Apricot", "Banana", "Blueberry", "Cherry", "Grape")
-		if (q.isBlank()) all else all.filter { it.contains(q, ignoreCase = true) }
-	}
-	val field = AutocompleteField(scope, fetcher)
-
-	AutocompleteTextField(field, "Fruit")
 }
