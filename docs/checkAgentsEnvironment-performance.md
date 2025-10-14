@@ -19,7 +19,6 @@ Caching the Gradle user home keeps the bulk of the startup cost out of repeat bu
 - Gradle distribution downloaded by the wrapper: 146 MiB.【154d59†L1-L3】
 - Maven dependencies in `~/.gradle/caches/modules-2`: 346 MiB overall, with 330 MiB under `files-2.1`.【78e5da†L1-L3】【66e1aa†L1-L2】
 - Largest modules downloaded during the run include Kotlin compiler/tooling (≈155 MiB), Skiko, Compose, and Ktor artifacts, so trimming Kotlin/Compose dependencies would yield the biggest savings rather than Java modules alone.【dcba40†L1-L11】【70a3a9†L1-L10】
-- Android build tooling is no longer part of the task's default dependency graph. Set `-Pfirefly.enableAndroid=true` when invoking Gradle to apply the Android plugin and restore Android-specific checks when needed.
 
 ## Work performed per run
 The profiling run shows the tasks that dominate the forced rebuild. Times below come from the generated profile report.

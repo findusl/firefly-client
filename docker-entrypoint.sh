@@ -3,7 +3,7 @@ set -o pipefail
 
 start=$(date +%s)
 
-./gradlew checkAgentsEnvironment --parallel
+./gradlew checkAgentsEnvironment -PenableAndroid=false --parallel
 status=$?
 
 end=$(date +%s)

@@ -35,10 +35,13 @@ use `python openapi_helper.py /v1/accounts --request` to fetch the same data.
 ## Code formatting
 - Kotlin files use tabs for indentation; see `.editorconfig` for all style rules.
 
+## Building
+Use the gradle flag `-PenableAndroid=false` to avoid issues due to missing Android SDK components.
+
 ## Testing
 - Add tests for new features whenever possible.
 - Use `kotlin.test` for unit tests in shared code.
 - Use the Compose UI Test toolkit for UI testing.
 - Compose UI tests should not use `waitForIdle`; prefer `waitUntil` or one of its variants instead.
 - Use `kotlinx.coroutines.test` (e.g. `runTest`) for coroutine-based code.
-- Run `./gradlew checkAgentsEnvironment  --parallel --console=plain` before committing. Use `./gradlew ktlintFormat` to fix formatting issues.
+- Run `./gradlew checkAgentsEnvironment -PenableAndroid=false --parallel --console=plain` before committing. Use `./gradlew ktlintFormat` to fix formatting issues.

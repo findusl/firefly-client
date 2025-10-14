@@ -1,22 +1,52 @@
+import com.android.build.api.dsl.ApplicationExtension
 import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
+import org.gradle.api.JavaVersion
+import org.gradle.kotlin.dsl.configure
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
 	alias(libs.plugins.kotlinMultiplatform)
-	alias(libs.plugins.androidApplication) apply false
 	alias(libs.plugins.composeMultiplatform)
 	alias(libs.plugins.composeCompiler)
 	alias(libs.plugins.serialization)
 	alias(libs.plugins.buildKonfig)
+	alias(libs.plugins.androidApplication) apply false
 }
 
 val androidEnabled = providers
-	.gradleProperty("firefly.enableAndroid")
+	.gradleProperty("enableAndroid")
 	.map(String::toBoolean)
-	.orElse(false)
+	.orElse(true)
 
 if (androidEnabled.get()) {
 	pluginManager.apply(libs.plugins.androidApplication.get().pluginId)
+	extensions.configure<ApplicationExtension> {
+		namespace = "de.lehrbaum.firefly"
+		compileSdk = libs.versions.android.compileSdk.get().toInt()
+
+		defaultConfig {
+			applicationId = "de.lehrbaum.firefly"
+			minSdk = libs.versions.android.minSdk.get().toInt()
+			targetSdk = libs.versions.android.targetSdk.get().toInt()
+			versionCode = 1
+			versionName = "1.0"
+		}
+		packaging {
+			resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+		}
+		buildTypes {
+			getByName("release") {
+				isMinifyEnabled = false
+			}
+		}
+		compileOptions {
+			sourceCompatibility = JavaVersion.VERSION_11
+			targetCompatibility = JavaVersion.VERSION_11
+		}
+	}
+	dependencies {
+		add("debugImplementation", compose.uiTooling)
+	}
 }
 
 kotlin {
@@ -125,8 +155,4 @@ buildkonfig {
 		buildConfigField(STRING, "BASE_URL", baseUrl)
 		buildConfigField(STRING, "ACCESS_TOKEN", accessToken)
 	}
-}
-
-if (androidEnabled.get()) {
-	apply(from = file("android.gradle.kts"))
 }
