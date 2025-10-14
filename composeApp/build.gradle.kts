@@ -63,8 +63,6 @@ kotlin {
 			}
 		}
 		commonMain.dependencies {
-			implementation(compose.components.resources)
-			implementation(compose.components.uiToolingPreview)
 			implementation(compose.foundation)
 			implementation(compose.runtime)
 			implementation(compose.ui)
@@ -94,6 +92,7 @@ kotlin {
 				implementation(compose.uiTest)
 				@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
 				implementation(compose.desktop.uiTestJUnit4)
+				implementation(compose.components.uiToolingPreview)
 				implementation(libs.multiplatform.settings.test)
 			}
 		}
