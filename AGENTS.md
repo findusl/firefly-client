@@ -34,7 +34,6 @@ use `python openapi_helper.py /v1/accounts --request` to fetch the same data.
 
 ## Code formatting
 - Kotlin files use tabs for indentation; see `.editorconfig` for all style rules.
-- Run `./gradlew ktlintFormat` before committing to apply the project-specific Kotlin style.
 
 ## Testing
 - Add tests for new features whenever possible.
@@ -42,4 +41,4 @@ use `python openapi_helper.py /v1/accounts --request` to fetch the same data.
 - Use the Compose UI Test toolkit for UI testing.
 - Compose UI tests should not use `waitForIdle`; prefer `waitUntil` or one of its variants instead.
 - Use `kotlinx.coroutines.test` (e.g. `runTest`) for coroutine-based code.
-- Run `./gradlew checkAgentsEnvironment  --parallel --console=plain` before committing.
+- Run `./gradlew checkAgentsEnvironment  --parallel --console=plain` before committing. Use `./gradlew ktlintFormat` to fix formatting issues.

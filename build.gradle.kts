@@ -11,6 +11,20 @@ plugins {
 	alias(libs.plugins.ktlint)
 }
 
+val printKtlintFormatTask = tasks.register("printKtlintFormatTask") {
+	doLast {
+		println("Use ./gradlew ktlintFormat to fix formatting issues")
+	}
+}
+
+tasks
+	.matching {
+		println("Filtering task " + it.name)
+		it.name.startsWith("ktlint") && it.name.endsWith("Check")
+	}.configureEach {
+		finalizedBy(printKtlintFormatTask)
+	}
+
 allprojects {
 	apply(plugin = rootProject.libs.plugins.ktlint.get().pluginId)
 
@@ -30,6 +44,14 @@ allprojects {
 			exclude("**/BuildKonfig.kt")
 		}
 	}
+
+	tasks
+		.matching {
+			println("Filtering task " + it.name)
+			it.name.startsWith("ktlint") && it.name.endsWith("Check")
+		}.configureEach {
+			finalizedBy(printKtlintFormatTask)
+		}
 }
 
 tasks.register("checkAgentsEnvironment") {
