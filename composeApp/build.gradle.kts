@@ -2,6 +2,7 @@ import com.android.build.api.dsl.ApplicationExtension
 import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
 import org.gradle.api.JavaVersion
 import org.gradle.kotlin.dsl.configure
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -49,6 +50,7 @@ if (androidEnabled.get()) {
 	}
 }
 
+@OptIn(ExperimentalWasmDsl::class)
 kotlin {
 	if (androidEnabled.get()) {
 		androidTarget {
@@ -69,6 +71,18 @@ kotlin {
 		testRuns {
 			val uiTest by creating {
 				setExecutionSourceFrom(uiTestCompilation)
+			}
+		}
+	}
+
+	wasmJs {
+		compilerOptions {
+			outputModuleName.set("app")
+		}
+		binaries.executable()
+		browser {
+			commonWebpackConfig {
+				outputFileName = "app.js"
 			}
 		}
 	}
@@ -136,6 +150,15 @@ kotlin {
 			implementation(libs.kotlin.test)
 			implementation(libs.kotlinx.coroutines.test)
 			implementation(libs.ktor.client.mock)
+		}
+		val wasmJsMain by getting {
+			dependencies {
+				implementation(libs.ktor.client.js.wasm)
+				implementation(libs.ktor.client.contentNegotiation.wasm)
+				implementation(libs.ktor.serialization.kotlinxJson.wasm)
+				implementation(libs.multiplatform.settings.wasm.js)
+				implementation(libs.napier.wasm.js)
+			}
 		}
 	}
 }
