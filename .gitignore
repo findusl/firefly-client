@@ -18,3 +18,4 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 **/*.private.env.json
 .env
+kotlin-js-store/
