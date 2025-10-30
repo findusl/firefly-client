@@ -50,11 +50,14 @@ tasks.register("checkAgentsEnvironment") {
 	group = "verification"
 	description = "Runs all tests that are expected to pass in the agent environment"
 	dependsOn(":composeApp:jvmTest")
+	dependsOn(":composeApp:wasmJsNodeTest")
 	val secondaryTasks = listOf(":composeApp:jvmUiTestClasses", "ktlintCheck") + subprojects.map { "${it.path}:ktlintCheck" }
 	dependsOn(secondaryTasks)
 
 	val jvmTestTask = tasks.findByPath(":composeApp:jvmTest")
+	val wasmTestTask = tasks.findByPath(":composeApp:wasmJsNodeTest")
+	wasmTestTask?.mustRunAfter(jvmTestTask)
 	secondaryTasks.map { tasks.findByPath(it) }.forEach {
-		it!!.mustRunAfter(jvmTestTask)
+		it!!.mustRunAfter(wasmTestTask ?: jvmTestTask)
 	}
 }
