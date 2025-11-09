@@ -76,16 +76,9 @@ kotlin {
 	}
 
 	wasmJs {
-		compilerOptions {
-			outputModuleName.set("app")
-		}
+		outputModuleName = "composeApp"
+		browser()
 		binaries.executable()
-		browser {
-			commonWebpackConfig {
-				outputFileName = "app.js"
-			}
-		}
-		nodejs()
 	}
 
 	listOf(
