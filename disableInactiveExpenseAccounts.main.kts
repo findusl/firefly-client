@@ -109,8 +109,8 @@ runBlocking {
 client.close()
 
 logInfo(
-"Summary: accounts inspected=$accountsVisited, inactive expense accounts=$inactiveAccountsFound, " +
-"updates planned=$updatesPlanned, updates applied=$updatesApplied, updates failed=$updatesFailed.",
+	"Summary: accounts inspected=$accountsVisited, inactive expense accounts=$inactiveAccountsFound, " +
+		"updates planned=$updatesPlanned, updates applied=$updatesApplied, updates failed=$updatesFailed.",
 )
 if (dryRun) {
 	logInfo("Dry run complete. Re-run with -f to apply these changes.")
@@ -125,13 +125,13 @@ suspend fun disableAccount(id: String, attributes: JsonObject) {
 		return
 	}
 
-        val updateRequest = buildJsonObject {
-                // Firefly III only requires "name" and "type" for account updates; send the minimum
-                // to avoid losing data when new optional fields are added.
-                put("name", name)
-                put("type", type)
-                put("active", false)
-        }
+	val updateRequest = buildJsonObject {
+		// Firefly III only requires "name" and "type" for account updates; send the minimum
+		// to avoid losing data when new optional fields are added.
+		put("name", name)
+		put("type", type)
+		put("active", false)
+	}
 
 	if (dryRun) {
 		updatesPlanned += 1
@@ -143,10 +143,10 @@ suspend fun disableAccount(id: String, attributes: JsonObject) {
 	val response = client.put("$baseUrl/api/v1/accounts/$id") {
 		header("Authorization", "Bearer $accessToken")
 		setBody(
-		TextContent(
-		json.encodeToString(JsonObject.serializer(), updateRequest),
-		ContentType.Application.Json,
-		),
+			TextContent(
+				json.encodeToString(JsonObject.serializer(), updateRequest),
+				ContentType.Application.Json,
+			),
 		)
 	}
 	val responseText = response.bodyAsText()
