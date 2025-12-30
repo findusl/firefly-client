@@ -8,6 +8,7 @@
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
@@ -15,15 +16,16 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
 import kotlin.system.exitProcess
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
@@ -72,7 +74,7 @@ var updatesFailed = 0
 
 suspend fun accountsPage(page: Int): Pair<JsonArray, Int>? {
 	val response = client.get("$baseUrl/api/v1/accounts") {
-		header("Authorization", "Bearer $accessToken")
+		addAuthHeader()
 		parameter("page", page)
 		parameter("type", "expense")
 	}
@@ -97,7 +99,7 @@ suspend fun accountsPage(page: Int): Pair<JsonArray, Int>? {
 	return data to totalPages
 }
 
-runBlocking(Dispatchers.IO) {
+runBlocking {
 	var page = 1
 	var totalPages: Int? = null
 	while (totalPages == null || page <= totalPages) {
@@ -135,7 +137,7 @@ if (dryRun) {
 
 suspend fun accountTransactionCount(id: String): Int {
 	val response = client.get("$baseUrl/api/v1/accounts/$id/transactions") {
-		header("Authorization", "Bearer $accessToken")
+		addAuthHeader()
 		parameter("page", 1)
 		parameter("limit", 1)
 	}
@@ -170,7 +172,9 @@ suspend fun disableAccount(id: String, attributes: JsonObject) {
 
 	val updateRequest = buildJsonObject {
 		attributes.forEach { (key, value) ->
-			put(key, value)
+			if (value !is JsonNull) {
+				put(key, value)
+			}
 		}
 		put("active", false)
 	}
@@ -183,7 +187,8 @@ suspend fun disableAccount(id: String, attributes: JsonObject) {
 
 	logInfo("Disabling expense account '$name' (id=$id).")
 	val response = client.put("$baseUrl/api/v1/accounts/$id") {
-		header("Authorization", "Bearer $accessToken")
+		addAuthHeader()
+		header(HttpHeaders.Accept, ContentType.Application.Json)
 		setBody(
 			TextContent(
 				json.encodeToString(JsonObject.serializer(), updateRequest),
@@ -207,6 +212,10 @@ suspend fun disableAccount(id: String, attributes: JsonObject) {
 fun isExpenseAccount(attributes: JsonObject): Boolean {
 	val type = attributes["type"]?.jsonPrimitive?.contentOrNull ?: return false
 	return type.equals("expense", ignoreCase = true) || type.equals("Expense account", ignoreCase = true)
+}
+
+fun HttpRequestBuilder.addAuthHeader() {
+	header(HttpHeaders.Authorization, "Bearer $accessToken")
 }
 
 fun logInfo(message: String) = println("INFO: $message")
