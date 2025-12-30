@@ -67,7 +67,7 @@ var updatesPlanned = 0
 var updatesApplied = 0
 var updatesFailed = 0
 
-suspend fun accountsPage(page: Int): Pair<JsonArray, Int?>? {
+suspend fun accountsPage(page: Int): Pair<JsonArray, Int>? {
 	val response = client.get("$baseUrl/api/v1/accounts") {
 		header("Authorization", "Bearer $accessToken")
 		parameter("page", page)
@@ -97,9 +97,9 @@ suspend fun accountsPage(page: Int): Pair<JsonArray, Int?>? {
 runBlocking {
 	var page = 1
 	var totalPages: Int? = null
-	while (totalPages == null || page <= totalPages!!) {
+	while (totalPages == null || page <= totalPages) {
 		val (data, pageCount) = accountsPage(page) ?: break
-		totalPages = pageCount ?: break
+		totalPages = pageCount
 		logInfo("Processing page $page of $totalPages")
 		for (entry in data) {
 			val account = entry.jsonObject
@@ -112,7 +112,7 @@ runBlocking {
 			accountsWithoutTransactions += 1
 			disableAccount(id, attributes)
 		}
-		if (totalPages == 0 || page >= totalPages!!) break
+		if (page >= totalPages) break
 		page += 1
 	}
 }
@@ -152,8 +152,7 @@ suspend fun accountTransactionCount(id: String): Int {
 }
 
 suspend fun disableAccount(id: String, attributes: JsonObject) {
-	val name = attributes["name"]!!.jsonPrimitive.content
-	val type = attributes["type"]!!.jsonPrimitive.content
+	val name = attributes["name"]?.jsonPrimitive?.content
 	val active = attributes["active"]?.jsonPrimitive?.booleanOrNull ?: true
 
 	if (!active) {
