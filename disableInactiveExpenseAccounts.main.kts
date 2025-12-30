@@ -18,6 +18,9 @@ import io.ktor.http.ContentType
 import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
 import kotlin.system.exitProcess
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -94,24 +97,27 @@ suspend fun accountsPage(page: Int): Pair<JsonArray, Int>? {
 	return data to totalPages
 }
 
-runBlocking {
+runBlocking(Dispatchers.IO) {
 	var page = 1
 	var totalPages: Int? = null
 	while (totalPages == null || page <= totalPages) {
 		val (data, pageCount) = accountsPage(page) ?: break
 		totalPages = pageCount
 		logInfo("Processing page $page of $totalPages")
-		for (entry in data) {
-			val account = entry.jsonObject
-			val id = account["id"]?.jsonPrimitive?.contentOrNull ?: continue
-			val attributes = account["attributes"]?.jsonObject ?: continue
-			if (!isExpenseAccount(attributes)) continue
-			accountsVisited += 1
-			val transactionCount = accountTransactionCount(id)
-			if (transactionCount > 0) continue
-			accountsWithoutTransactions += 1
-			disableAccount(id, attributes)
-		}
+		data
+			.mapNotNull { account ->
+				val account = account.jsonObject
+				val id = account["id"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+				val attributes = account["attributes"]?.jsonObject ?: return@mapNotNull null
+				if (!isExpenseAccount(attributes)) return@mapNotNull null
+				accountsVisited += 1
+				async {
+					val transactionCount = accountTransactionCount(id)
+					if (transactionCount > 0) return@async
+					accountsWithoutTransactions += 1
+					disableAccount(id, attributes)
+				}
+			}.awaitAll()
 		if (page >= totalPages) break
 		page += 1
 	}
