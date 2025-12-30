@@ -67,28 +67,39 @@ var updatesPlanned = 0
 var updatesApplied = 0
 var updatesFailed = 0
 
+suspend fun accountsPage(page: Int): Pair<JsonArray, Int?>? {
+	val response = client.get("$baseUrl/api/v1/accounts") {
+		header("Authorization", "Bearer $accessToken")
+		parameter("page", page)
+		parameter("type", "expense")
+	}
+	val bodyText = response.bodyAsText()
+	if (!response.status.isSuccess()) {
+		logError("Failed to list accounts: HTTP ${response.status.value} ${response.status.description}")
+		if (bodyText.isNotBlank()) {
+			logError(bodyText)
+		}
+		return null
+	}
+
+	val root = json.parseToJsonElement(bodyText).jsonObject
+	val data = root["data"]?.jsonArray ?: JsonArray(emptyList())
+	val pagination = root["meta"]?.jsonObject?.get("pagination")?.jsonObject
+	val totalPages = pagination?.get("total_pages")?.jsonPrimitive?.intOrNull
+	if (totalPages == null) {
+		logError("Failed to read total_pages from accounts pagination metadata on page $page.")
+		return null
+	}
+
+	return data to totalPages
+}
+
 runBlocking {
 	var page = 1
 	var totalPages: Int? = null
 	while (totalPages == null || page <= totalPages!!) {
-		val response = client.get("$baseUrl/api/v1/accounts") {
-			header("Authorization", "Bearer $accessToken")
-			parameter("page", page)
-			parameter("type", "expense")
-		}
-		val bodyText = response.bodyAsText()
-		if (!response.status.isSuccess()) {
-			logError("Failed to list accounts: HTTP ${response.status.value} ${response.status.description}")
-			if (bodyText.isNotBlank()) {
-				logError(bodyText)
-			}
-			break
-		}
-		val root = json.parseToJsonElement(bodyText).jsonObject
-		val data = root["data"]?.jsonArray ?: JsonArray(emptyList())
-		val pagination = root["meta"]?.jsonObject?.get("pagination")?.jsonObject
-		totalPages = pagination?.get("total_pages")?.jsonPrimitive?.intOrNull
-		if (totalPages == null) break
+		val (data, pageCount) = accountsPage(page) ?: break
+		totalPages = pageCount ?: break
 		logInfo("Processing page $page of $totalPages")
 		for (entry in data) {
 			val account = entry.jsonObject
@@ -141,14 +152,9 @@ suspend fun accountTransactionCount(id: String): Int {
 }
 
 suspend fun disableAccount(id: String, attributes: JsonObject) {
-	val name = attributes["name"]?.jsonPrimitive?.contentOrNull
-	val type = attributes["type"]?.jsonPrimitive?.contentOrNull
+	val name = attributes["name"]!!.jsonPrimitive.content
+	val type = attributes["type"]!!.jsonPrimitive.content
 	val active = attributes["active"]?.jsonPrimitive?.booleanOrNull ?: true
-	if (name.isNullOrBlank() || type.isNullOrBlank()) {
-		logError("Account $id is missing name or type; skipping.")
-		updatesFailed += 1
-		return
-	}
 
 	if (!active) {
 		logInfo(
@@ -158,10 +164,9 @@ suspend fun disableAccount(id: String, attributes: JsonObject) {
 	}
 
 	val updateRequest = buildJsonObject {
-		// Firefly III only requires "name" and "type" for account updates; send the minimum
-		// to avoid losing data when new optional fields are added.
-		put("name", name)
-		put("type", type)
+		attributes.forEach { (key, value) ->
+			put(key, value)
+		}
 		put("active", false)
 	}
 
