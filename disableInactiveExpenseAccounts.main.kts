@@ -62,7 +62,7 @@ val client = HttpClient(CIO) {
 }
 
 var accountsVisited = 0
-var inactiveAccountsFound = 0
+var accountsWithoutTransactions = 0
 var updatesPlanned = 0
 var updatesApplied = 0
 var updatesFailed = 0
@@ -96,9 +96,9 @@ runBlocking {
 			val attributes = account["attributes"]?.jsonObject ?: continue
 			if (!isExpenseAccount(attributes)) continue
 			accountsVisited += 1
-			val active = attributes["active"]?.jsonPrimitive?.booleanOrNull ?: true
-			if (active) continue
-			inactiveAccountsFound += 1
+			val transactionCount = accountTransactionCount(id)
+			if (transactionCount > 0) continue
+			accountsWithoutTransactions += 1
 			disableAccount(id, attributes)
 		}
 		if (totalPages == 0 || page >= totalPages!!) break
@@ -109,19 +109,51 @@ runBlocking {
 client.close()
 
 logInfo(
-	"Summary: accounts inspected=$accountsVisited, inactive expense accounts=$inactiveAccountsFound, " +
+	"Summary: accounts inspected=$accountsVisited, no-transaction expense accounts=$accountsWithoutTransactions, " +
 		"updates planned=$updatesPlanned, updates applied=$updatesApplied, updates failed=$updatesFailed.",
 )
 if (dryRun) {
 	logInfo("Dry run complete. Re-run with -f to apply these changes.")
 }
 
+suspend fun accountTransactionCount(id: String): Int {
+	val response = client.get("$baseUrl/api/v1/accounts/$id/transactions") {
+		header("Authorization", "Bearer $accessToken")
+		parameter("page", 1)
+		parameter("limit", 1)
+	}
+	val bodyText = response.bodyAsText()
+	if (!response.status.isSuccess()) {
+		logError(
+			"Failed to list transactions for account $id: HTTP ${response.status.value} ${response.status.description}",
+		)
+		if (bodyText.isNotBlank()) {
+			logError(bodyText)
+		}
+		return Int.MAX_VALUE
+	}
+
+	val root = json.parseToJsonElement(bodyText).jsonObject
+	val pagination = root["meta"]?.jsonObject?.get("pagination")?.jsonObject
+	return pagination?.get("total")?.jsonPrimitive?.intOrNull
+		?: pagination?.get("total_entries")?.jsonPrimitive?.intOrNull
+		?: 0
+}
+
 suspend fun disableAccount(id: String, attributes: JsonObject) {
 	val name = attributes["name"]?.jsonPrimitive?.contentOrNull
 	val type = attributes["type"]?.jsonPrimitive?.contentOrNull
+	val active = attributes["active"]?.jsonPrimitive?.booleanOrNull ?: true
 	if (name.isNullOrBlank() || type.isNullOrBlank()) {
 		logError("Account $id is missing name or type; skipping.")
 		updatesFailed += 1
+		return
+	}
+
+	if (!active) {
+		logInfo(
+			"Expense account '$name' (id=$id) already inactive and has no transactions; skipping update.",
+		)
 		return
 	}
 
