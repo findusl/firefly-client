@@ -4,8 +4,8 @@ android-compileSdk = "36"
 android-minSdk = "24"
 android-targetSdk = "36"
 androidx-activity = "1.11.0"
-compose-material3 = "1.11.0-alpha05"
-composeMultiplatform = "1.11.0-beta01"
+compose-material3 = "1.11.0-alpha06"
+composeMultiplatform = "1.11.0-beta02"
 junit = "4.13.2"
 kotlin = "2.3.20"
 kotlinx-collections-immutable = "0.4.0"
@@ -43,7 +43,7 @@ napier-wasm-js = { module = "io.github.aakira:napier-wasm-js", version.ref = "na
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
-buildKonfig = { id = "com.codingfeline.buildkonfig", version = "0.17.1" }
+buildKonfig = { id = "com.codingfeline.buildkonfig", version = "0.18.0" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
