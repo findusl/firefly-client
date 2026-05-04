@@ -43,7 +43,7 @@ napier-wasm-js = { module = "io.github.aakira:napier-wasm-js", version.ref = "na
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
-buildKonfig = { id = "com.codingfeline.buildkonfig", version = "0.18.0" }
+buildKonfig = { id = "com.codingfeline.buildkonfig", version = "0.19.0" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
