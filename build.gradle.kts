@@ -1,4 +1,5 @@
 plugins {
+	base
 	// this is necessary to avoid the plugins to be loaded multiple times
 	// in each subproject's classloader
 	alias(libs.plugins.androidApplication) apply false
@@ -20,6 +21,16 @@ val printKtlintFormatTask = tasks.register("printKtlintFormatTask") {
 tasks
 	.matching { it.name.startsWith("ktlint") && it.name.endsWith("Check") }
 	.configureEach { finalizedBy(printKtlintFormatTask) }
+
+val checkAgentsEnvironment = tasks.register("checkAgentsEnvironment") {
+	group = LifecycleBasePlugin.VERIFICATION_GROUP
+	description = "Runs the JVM-only checks used by automated agents."
+	dependsOn("ktlintCheck", ":composeApp:jvmTest")
+}
+
+tasks.named("check") {
+	dependsOn(checkAgentsEnvironment)
+}
 
 allprojects {
 	apply(plugin = rootProject.libs.plugins.ktlint.get().pluginId)
