@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,7 +32,7 @@ fun <T> AutocompleteTextField(
 		},
 	) {
 		OutlinedTextField(
-			modifier = Modifier.fillMaxWidth().focusRequester(focusRequester).menuAnchor(MenuAnchorType.PrimaryEditable),
+			modifier = Modifier.fillMaxWidth().focusRequester(focusRequester).menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
 			value = field.text,
 			onValueChange = field::onTextChange,
 			label = { Text(label) },
