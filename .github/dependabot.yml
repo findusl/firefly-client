@@ -1,38 +1,66 @@
-# Please see the documentation for all configuration options:
-# https://help.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-
-# Gradle note: The dependabot does not find the versions in gradle.properties,
-# but constants in the build.gradle file worked.
-
 version: 2
 updates:
-  - package-ecosystem: "gradle"
-    directory: "/"
+  - package-ecosystem: gradle
+    directory: /
     schedule:
-      interval: "daily"
-    target-branch: "main"
+      interval: weekly
+    target-branch: main
     assignees:
-      - "findusl"
+      - findusl
     reviewers:
-      - "findusl"
+      - findusl
     open-pull-requests-limit: 10
     ignore:
-      # Gradle 9.6+ is incompatible with the current Android Gradle Plugin
-      - dependency-name: "gradle-wrapper"
+      # AGP 9.1 supports Gradle up to 9.5.
+      - dependency-name: gradle-wrapper
         versions:
-          - ">= 9.6.0"
-      # Allow 8.11.x bugfixes, block 8.12+ (Intellij IDE Plugin support)
-      - dependency-name: "com.android.tools.build:gradle"
+          - ">=9.6.0"
+      # Stay on AGP 9.1.x until the next toolchain migration is intentional.
+      - dependency-name: com.android.tools.build:gradle
         versions:
-          - ">= 8.12.0"
-      # Ignore the 0.6.x compatibility build of kotlinx-datetime
-      - dependency-name: "org.jetbrains.kotlinx:kotlinx-datetime"
+          - ">=9.2.0-alpha01"
+      - dependency-name: com.android.application
         versions:
-          - "0.7.1-0.6.x-compat"
-      # Breaks my UI Tests https://youtrack.jetbrains.com/issue/CMP-9081/JVM-Compose-UI-Tests-fail-in-1.10.0-alpha02-of-material3
-      - dependency-name: "org.jetbrains.compose.material3:material3"
+          - ">=9.2.0-alpha01"
+      - dependency-name: com.android.kotlin.multiplatform.library
         versions:
-          - "1.10.0-alpha02"
+          - ">=9.2.0-alpha01"
+      # Ignore the compatibility artifact that regresses to the 0.6 API.
+      - dependency-name: org.jetbrains.kotlinx:kotlinx-datetime
+        versions:
+          - 0.7.1-0.6.x-compat
+      # Material3 1.12 alpha breaks the JVM Compose UI tests (CMP-9081).
+      - dependency-name: org.jetbrains.compose.material3:material3
+        versions:
+          - ">=1.12.0-alpha01"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: main
+    assignees:
+      - findusl
+    reviewers:
+      - findusl
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: main
+    assignees:
+      - findusl
+    reviewers:
+      - findusl
     groups:
       all-dependencies:
         patterns:

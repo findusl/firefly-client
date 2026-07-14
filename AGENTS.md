@@ -3,9 +3,10 @@
 This repository contains tools for exploring the Firefly III OpenAPI specification and making demo requests.
 
 ## openapi_helper.py
-- `python openapi_helper.py` lists all endpoints in `firefly-iii-6.3.0-v1.yaml`.
-- `python openapi_helper.py <path>` prints the full, `$ref`-resolved details for the specified endpoint.
-- With `BASE_URL` and `ACCESS_TOKEN` set, `python openapi_helper.py <path> --request` performs a request against the demo API. The helper prefixes the path with `/api` and consults the OpenAPI spec to choose `Accept` and `Content-Type` headers. Use `--accept` or `--content-type` to override the spec when multiple media types are available, and `--method` to select an HTTP method.
+- Install its dependencies with `python3.13 -m venv .venv` and `.venv/bin/python -m pip install --requirement requirements.txt`.
+- `.venv/bin/python openapi_helper.py` lists all endpoints in `firefly-iii-v6.6.6-v1.yaml`.
+- `.venv/bin/python openapi_helper.py <path>` prints the full, `$ref`-resolved details for the specified endpoint.
+- With `BASE_URL` and `ACCESS_TOKEN` set, `.venv/bin/python openapi_helper.py <path> --request` performs a request against the demo API. The helper prefixes the path with `/api` and consults the OpenAPI spec to choose `Accept` and `Content-Type` headers. Use `--accept` or `--content-type` to override the spec when multiple media types are available, and `--method` to select an HTTP method.
 - The helper censors any occurrence of `BASE_URL` or `ACCESS_TOKEN` in its output so these values never appear in logs or files.
 
 ## Demo environment
@@ -22,9 +23,10 @@ curl -X GET --location "$BASE_URL/api/v1/accounts" \
 ```
 
 The above command writes the list of accounts to `accounts.json`. You can also
-use `python openapi_helper.py /v1/accounts --request` to fetch the same data.
+use `.venv/bin/python openapi_helper.py /v1/accounts --request` to fetch the same data.
 
 ## Kotlin Multiplatform development
+- `composeApp` is the shared multiplatform library; `androidApp` is the Android application wrapper.
 - Share business logic in `commonMain` so Android, iOS, and future targets like WebAssembly reuse the same code.
 - Prefer multiplatform libraries:
   - `kotlinx.datetime` for dates and times.
@@ -41,6 +43,8 @@ use `python openapi_helper.py /v1/accounts --request` to fetch the same data.
 
 ## Building
 - Use standard Gradle invocations without `-PenableAndroid=false`.
+- Build Android with `./gradlew :androidApp:assembleDebug`.
+- Build iOS with the `iosApp` Xcode scheme or the unsigned simulator `xcodebuild` command documented in `README.md`.
 - When verifying changes, run the Android and iOS apps on emulators/simulators and confirm startup in logs.
 
 ## Testing

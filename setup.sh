@@ -5,9 +5,5 @@ set -euo pipefail
 WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$WORKSPACE_DIR"
 
-# Ensure Android SDK environment variables are not set so the build runs in JVM-only mode.
-unset ANDROID_HOME || true
-unset ANDROID_SDK_ROOT || true
-
-# Run the JVM-only verification task used by agents.
-./gradlew --no-daemon checkAgentsEnvironment --console=plain
+# Run the baseline verification task used by agents.
+exec ./gradlew --no-daemon checkAgentsEnvironment --parallel --console=plain
