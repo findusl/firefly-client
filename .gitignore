@@ -19,3 +19,6 @@ captures
 **/*.private.env.json
 .env
 kotlin-js-store/
+.venv/
+__pycache__/
+*.py[cod]

@@ -7,20 +7,22 @@ Usage:
   python openapi_helper.py <path> --request  # perform request to the endpoint using BASE_URL and ACCESS_TOKEN
 """
 import argparse
+import json
 import os
 import sys
-import json
-from typing import Optional, Union
+from pathlib import Path
 from pprint import pprint
+from typing import Optional, Union
 
 import requests
 from prance import ResolvingParser
 
-SPEC_FILE = "firefly-iii-6.3.0-v1.yaml"
+SPEC_FILE = Path(__file__).with_name("firefly-iii-v6.6.6-v1.yaml")
+REQUEST_TIMEOUT_SECONDS = 30
 
 
 def load_spec():
-    parser = ResolvingParser(SPEC_FILE)
+    parser = ResolvingParser(str(SPEC_FILE))
     return parser.specification
 
 
@@ -103,15 +105,29 @@ def fetch_endpoint(
     if content_type and method.lower() in {"post", "put", "patch"}:
         headers["Content-Type"] = content_type
 
-    response = requests.request(method.upper(), url, headers=headers, data=data)
-    response.raise_for_status()
+    try:
+        response = requests.request(
+            method.upper(),
+            url,
+            headers=headers,
+            data=data,
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+    except requests.RequestException as error:
+        message = _censor(str(error), base_url, token)
+        raise RuntimeError(f"Request failed: {message}") from None
     return response
 
 
 def main(argv):
     parser = argparse.ArgumentParser(description="Inspect Firefly III OpenAPI spec")
     parser.add_argument("path", nargs="?", help="Endpoint path to inspect")
-    parser.add_argument("--request", action="store_true", help="Perform request to the given path using BASE_URL and ACCESS_TOKEN")
+    parser.add_argument(
+        "--request",
+        action="store_true",
+        help="Perform request to the given path using BASE_URL and ACCESS_TOKEN",
+    )
     parser.add_argument("--method", default="get", help="HTTP method for --request")
     parser.add_argument("--accept", help="Override Accept header")
     parser.add_argument("--content-type", help="Override Content-Type header")
@@ -129,7 +145,7 @@ def main(argv):
         body = None
         if args.data:
             body = (
-                open(args.data[1:], "rb").read()
+                Path(args.data[1:]).read_bytes()
                 if args.data.startswith("@")
                 else args.data
             )
