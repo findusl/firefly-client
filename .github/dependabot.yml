@@ -17,6 +17,10 @@ updates:
       - "findusl"
     open-pull-requests-limit: 10
     ignore:
+      # Gradle 9.6+ is incompatible with the current Android Gradle Plugin
+      - dependency-name: "gradle-wrapper"
+        versions:
+          - ">= 9.6.0"
       # Allow 8.11.x bugfixes, block 8.12+ (Intellij IDE Plugin support)
       - dependency-name: "com.android.tools.build:gradle"
         versions:
