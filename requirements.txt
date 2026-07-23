@@ -1,2 +1,2 @@
-prance[osv]==25.4.8.0
+prance[osv]==26.7.19.0
 requests==2.34.2
